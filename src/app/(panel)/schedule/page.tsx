@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, getStoredUser } from "@/lib/api";
 import { JalaliDatePicker, PageHeader, Select } from "@/components/ui";
-import { fullName, todayJalali } from "@/lib/format";
+import { EXCEPTION_LABEL, fullName, todayJalali } from "@/lib/format";
 
 type Session = {
   lessonId: string;
@@ -19,6 +19,7 @@ type Session = {
 type ScheduleResponse = {
   date: string;
   dateInfo: { isLeap: boolean; yearLength: number; dayOfYear: number; year: number };
+  closed?: { title: string; type: "HOLIDAY" | "CLOSURE"; startDate: string; endDate: string; note?: string | null } | null;
   sessions: Session[];
 };
 
@@ -82,7 +83,17 @@ export default function SchedulePage() {
         )}
       </div>
       <div className="grid gap-3">
-        {data?.sessions.length === 0 && (
+        {data?.closed && (
+          <div className="official-card rounded-xl border-gold p-6 text-center">
+            <div className="text-lg font-bold text-navy">مدرسه در این تاریخ تعطیل است</div>
+            <p className="mt-2 text-sm text-muted">
+              {EXCEPTION_LABEL[data.closed.type]}: {data.closed.title}
+              {" "}از {data.closed.startDate} تا {data.closed.endDate}
+              {data.closed.note ? ` — ${data.closed.note}` : ""}
+            </p>
+          </div>
+        )}
+        {!data?.closed && data?.sessions.length === 0 && (
           <div className="official-card rounded-xl p-8 text-center text-muted">برای این تاریخ ساعت آموزشی ثبت نشده است.</div>
         )}
         {data?.sessions.map((session) => (

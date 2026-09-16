@@ -43,6 +43,11 @@ export const JUST_LABEL: Record<string, string> = {
   OTHER: "سایر",
 };
 
+export const EXCEPTION_LABEL: Record<string, string> = {
+  HOLIDAY: "تعطیل رسمی",
+  CLOSURE: "تعطیلی اضطراری",
+};
+
 export function fullName(person?: { firstName?: string; lastName?: string } | null) {
   if (!person) return "-";
   return `${person.firstName ?? ""} ${person.lastName ?? ""}`.trim() || "-";

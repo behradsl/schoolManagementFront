@@ -117,17 +117,19 @@ export function Modal({
   title,
   children,
   onClose,
+  wide = false,
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" onClick={onClose}>
       <div
-        className="official-card max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl p-6"
+        className={`official-card max-h-[90vh] w-full overflow-y-auto rounded-xl p-6 ${wide ? "max-w-5xl" : "max-w-3xl"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between border-b border-line pb-3">

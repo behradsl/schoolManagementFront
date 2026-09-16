@@ -11,18 +11,18 @@ type CycleDetail = {
   id: string;
   name: string;
   dayCount: number;
-  timeSlots: Array<{ id: string; name: string; startTime: string; endTime: string }>;
+  timeSlots: Array<{ id: string; name: string; startTime: string; endTime: string; cycleDay: number }>;
   classCycles: Array<{
     id: string;
     startDate: string;
     endDate: string;
     startCycleDay: number;
     startDateInfo?: { isLeap: boolean; yearLength: number; dayOfYear: number; year: number };
-    class: { id: string; name: string };
+    class: { id: string; name: string; studyYear?: { name: string } };
   }>;
 };
 
-type SchoolClass = { id: string; name: string; studyingYearName: string };
+type SchoolClass = { id: string; name: string; studyingYearName?: string; studyYear?: { name: string } };
 
 export default function CycleDetailPage() {
   const params = useParams<{ id: string }>();
@@ -65,17 +65,39 @@ export default function CycleDetailPage() {
     <div>
       <PageHeader
         title={cycle.name}
-        subtitle={`سیکل ${cycle.dayCount} روزه — هنگام اختصاص به کلاس مشخص کنید روز شروع سیکل با کدام روز تقویم شمسی متناظر است.`}
+        subtitle={`سیکل ${cycle.dayCount} روزه — ساعات هر روز سیکل می‌تواند متفاوت باشد. هنگام اختصاص به کلاس مشخص کنید روز شروع سیکل با کدام روز تقویم شمسی متناظر است.`}
         actions={<Link href="/cycles"><Button variant="outline">بازگشت</Button></Link>}
       />
       <Alert message={error} />
+      <div className="official-card mb-6 rounded-xl p-5">
+        <h3 className="mb-3 font-bold text-navy">ساعات هر روز سیکل</h3>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: cycle.dayCount }, (_, i) => i + 1).map((day) => {
+            const daySlots = cycle.timeSlots.filter((slot) => slot.cycleDay === day);
+            return (
+              <div key={day} className="rounded-md bg-cream px-3 py-2 text-sm">
+                <div className="font-bold text-navy">روز {day}</div>
+                {daySlots.length === 0 ? (
+                  <div className="text-muted">بدون کلاس</div>
+                ) : (
+                  daySlots.map((slot) => (
+                    <div key={slot.id} className="text-muted">
+                      {slot.name}: {slot.startTime} تا {slot.endTime}
+                    </div>
+                  ))
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <div className="official-card mb-6 rounded-xl p-5">
         <h3 className="mb-4 font-bold text-navy">اختصاص سیکل به کلاس</h3>
         <FormGrid onSubmit={assign}>
           <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)} required>
             <option value="">انتخاب کلاس</option>
             {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} — {c.studyingYearName}</option>
+              <option key={c.id} value={c.id}>{c.name} — {c.studyYear?.name ?? c.studyingYearName}</option>
             ))}
           </Select>
           <Input
@@ -104,7 +126,7 @@ export default function CycleDetailPage() {
         {cycle.classCycles.map((item) => (
           <div key={item.id} className="official-card flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="font-bold text-navy">{item.class.name}</div>
+              <div className="font-bold text-navy">{item.class.name}{item.class.studyYear?.name ? ` — ${item.class.studyYear.name}` : ""}</div>
               <div className="text-sm text-muted">
                 از {item.startDate} تا {item.endDate} — شروع با روز {item.startCycleDay} سیکل
                 {item.startDateInfo ? ` (سال ${item.startDateInfo.yearLength} روزه)` : ""}

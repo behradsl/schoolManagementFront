@@ -8,6 +8,7 @@ import { Alert, Button, PageHeader, useBusy } from "@/components/ui";
 import { fullName } from "@/lib/format";
 
 type Teacher = { id: string; firstName: string; lastName: string };
+type TimeSlot = { id: string; name: string; order: number; cycleDay: number; startTime: string; endTime: string };
 type ClassCycle = {
   id: string;
   startDate: string;
@@ -17,7 +18,7 @@ type ClassCycle = {
   cycle: {
     name: string;
     dayCount: number;
-    timeSlots: Array<{ id: string; name: string; order: number; startTime: string; endTime: string }>;
+    timeSlots: TimeSlot[];
   };
   lessons: Array<{ cycleDay: number; timeSlotId: string; courseName: string; teacherId: string }>;
 };
@@ -79,31 +80,28 @@ export default function ClassCyclePage() {
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
-      <div className="official-card table-wrap rounded-xl p-3">
-        <table className="data lesson-grid">
-          <thead>
-            <tr>
-              <th className="day-label">روز سیکل</th>
-              {data.cycle.timeSlots.map((slot) => (
-                <th key={slot.id}>
-                  {slot.name}
-                  <div className="text-xs font-normal text-muted">
-                    {slot.startTime} تا {slot.endTime}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((day) => (
-              <tr key={day}>
-                <td className="day-label font-bold">روز {day}</td>
-                {data.cycle.timeSlots.map((slot) => {
-                  const key = `${day}:${slot.id}`;
-                  const cell = grid[key] || { courseName: "", teacherId: "" };
-                  return (
-                    <td key={slot.id}>
-                      <div className="lesson-cell">
+      <div className="space-y-4">
+        {days.map((day) => {
+          const daySlots = data.cycle.timeSlots.filter((slot) => slot.cycleDay === day);
+          return (
+            <section key={day} className="official-card rounded-xl p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-bold text-navy">روز {day} سیکل</h3>
+                {daySlots.length === 0 && (
+                  <span className="rounded-full bg-cream px-3 py-1 text-xs text-muted">بدون ساعت آموزشی</span>
+                )}
+              </div>
+              {daySlots.length === 0 ? (
+                <p className="text-sm text-muted">برای این روز سیکل ساعتی تعریف نشده و درسی برگزار نمی‌شود.</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {daySlots.map((slot) => {
+                    const key = `${day}:${slot.id}`;
+                    const cell = grid[key] || { courseName: "", teacherId: "" };
+                    return (
+                      <div key={slot.id} className="lesson-cell rounded-lg border border-line bg-cream/50 p-3">
+                        <div className="text-sm font-bold text-navy">{slot.name}</div>
+                        <div className="text-xs text-muted">{slot.startTime} تا {slot.endTime}</div>
                         <input
                           className="rounded border border-line px-2 py-1.5"
                           placeholder="نام درس"
@@ -121,13 +119,13 @@ export default function ClassCyclePage() {
                           ))}
                         </select>
                       </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </div>
   );
