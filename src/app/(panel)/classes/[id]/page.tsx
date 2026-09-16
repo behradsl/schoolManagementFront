@@ -13,8 +13,9 @@ type ClassDetail = {
   name: string;
   fieldOfStudy: string;
   level: string;
-  studyingYearName: string;
-  students: Student[];
+  studyingYearName?: string;
+  studyYear?: { name: string; startDate: string; endDate: string };
+  students: Array<Student & { enrollmentStart?: string | null; enrollmentEnd?: string | null }>;
 };
 
 export default function ClassDetailPage() {
@@ -37,7 +38,7 @@ export default function ClassDetailPage() {
     <div>
       <PageHeader
         title={`کلاس ${data.name}`}
-        subtitle={`${data.fieldOfStudy} — ${data.level} — سال ${data.studyingYearName}`}
+        subtitle={`${data.fieldOfStudy} — ${data.level} — سال ${data.studyYear?.name ?? data.studyingYearName} (${data.studyYear?.startDate} تا ${data.studyYear?.endDate})`}
         actions={
           <>
             <Link href="/classes"><Button variant="outline">بازگشت</Button></Link>
@@ -87,6 +88,7 @@ export default function ClassDetailPage() {
               <th>نام خانوادگی</th>
               <th>کد ملی</th>
               <th>شماره دانش‌آموزی</th>
+              <th>بازه عضویت</th>
               <th></th>
             </tr>
           </thead>
@@ -97,6 +99,7 @@ export default function ClassDetailPage() {
                 <td>{s.lastName}</td>
                 <td>{s.nationalCode}</td>
                 <td>{s.studentNumber || "-"}</td>
+                <td>{s.enrollmentStart} تا {s.enrollmentEnd}</td>
                 <td>
                   <Button variant="danger" onClick={async () => {
                     await api(`/classes/${data.id}/students/${s.id}`, { method: "DELETE" });
