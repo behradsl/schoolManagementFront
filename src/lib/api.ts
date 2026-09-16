@@ -1,5 +1,4 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "/backend";
 
 export type AuthUser = {
   id: string;
@@ -14,25 +13,18 @@ export type AuthUser = {
   } | null;
 };
 
-export function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
-}
-
 export function getStoredUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("user");
+  const raw = sessionStorage.getItem("user");
   return raw ? (JSON.parse(raw) as AuthUser) : null;
 }
 
-export function setSession(token: string, user: AuthUser) {
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
+export function setSession(user: AuthUser) {
+  sessionStorage.setItem("user", JSON.stringify(user));
 }
 
 export function clearSession() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  sessionStorage.removeItem("user");
 }
 
 async function readError(res: Response) {
@@ -43,17 +35,24 @@ async function readError(res: Response) {
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
   if (res.status === 401) {
     clearSession();
-    if (typeof window !== "undefined") window.location.href = "/login";
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
     throw new Error("نشست شما منقضی شده است");
+  }
+  if (res.status === 429) {
+    throw new Error("تعداد تلاش‌های شما بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.");
   }
   if (!res.ok) throw new Error(await readError(res));
   if (res.status === 204) return undefined as T;
@@ -61,10 +60,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 
 export async function downloadFile(path: string, filename: string) {
-  const token = getToken();
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
+  const res = await fetch(`${API_URL}${path}`, { credentials: "include" });
   if (!res.ok) throw new Error(await readError(res));
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -76,12 +72,11 @@ export async function downloadFile(path: string, filename: string) {
 }
 
 export async function uploadFile<T>(path: string, file: File): Promise<T> {
-  const token = getToken();
   const form = new FormData();
   form.append("file", file);
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    credentials: "include",
     body: form,
   });
   if (!res.ok) throw new Error(await readError(res));

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
+  Building2,
   CalendarDays,
   ClipboardCheck,
   GraduationCap,
@@ -14,10 +15,13 @@ import {
   Users,
   UserSquare2,
 } from "lucide-react";
-import { AuthUser, api, clearSession, getStoredUser } from "@/lib/api";
+import { AuthUser, api, clearSession, setSession } from "@/lib/api";
+
+const ADMIN_ONLY = ["/students", "/teachers", "/classes", "/cycles", "/users", "/class-cycles", "/school"];
 
 const ALL_ITEMS = [
   { href: "/dashboard", label: "داشبورد", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER"] },
+  { href: "/school", label: "مدرسه و سال تحصیلی", icon: Building2, roles: ["ADMIN"] },
   { href: "/students", label: "دانش‌آموزان", icon: GraduationCap, roles: ["ADMIN"] },
   { href: "/teachers", label: "دبیران", icon: UserSquare2, roles: ["ADMIN"] },
   { href: "/classes", label: "کلاس‌ها", icon: School, roles: ["ADMIN"] },
@@ -32,22 +36,28 @@ export function Shell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [schoolName, setSchoolName] = useState("سامانه مدرسه");
 
   useEffect(() => {
-    const stored = getStoredUser();
-    if (!stored) {
-      router.replace("/login");
-      return;
-    }
-    setUser(stored);
-    setReady(true);
+    api<{ name: string }>("/school").then((school) => setSchoolName(school.name)).catch(() => undefined);
     api<AuthUser>("/auth/me")
       .then((fresh) => {
-        localStorage.setItem("user", JSON.stringify(fresh));
+        setSession(fresh);
         setUser(fresh);
+        if (
+          fresh.role === "TEACHER" &&
+          ADMIN_ONLY.some((prefix) => pathname.startsWith(prefix))
+        ) {
+          router.replace("/schedule");
+          return;
+        }
+        setReady(true);
       })
-      .catch(() => undefined);
-  }, [router]);
+      .catch(() => {
+        clearSession();
+        router.replace("/login");
+      });
+  }, [router, pathname]);
 
   const items = useMemo(
     () => ALL_ITEMS.filter((item) => user && item.roles.includes(user.role)),
@@ -62,8 +72,8 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-cream text-ink">
       <aside className="fixed inset-y-0 right-0 z-30 hidden w-64 border-l border-navy-soft/20 bg-navy text-white lg:flex lg:flex-col">
         <div className="border-b border-white/10 px-5 py-6">
-          <div className="text-xs tracking-widest text-gold">سامانه رسمی مدرسه</div>
-          <div className="mt-2 text-lg font-bold">مدیریت اطلاعات آموزشی</div>
+          <div className="text-xs tracking-widest text-gold">سامانه مدیریت مدرسه</div>
+          <div className="mt-2 text-lg font-bold">{schoolName}</div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {items.map((item) => {
@@ -85,7 +95,8 @@ export function Shell({ children }: { children: ReactNode }) {
         </nav>
         <button
           className="m-3 flex items-center gap-2 rounded-md px-3 py-2 text-sm text-white/80 hover:bg-white/10"
-          onClick={() => {
+          onClick={async () => {
+            await api("/auth/logout", { method: "POST" }).catch(() => undefined);
             clearSession();
             router.replace("/login");
           }}
@@ -96,7 +107,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <div className="lg:mr-64">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-paper/90 px-4 py-3 backdrop-blur">
-          <div className="lg:hidden font-bold text-navy">سامانه مدرسه</div>
+          <div className="lg:hidden font-bold text-navy">{schoolName}</div>
           <div className="mr-auto text-sm text-muted">
             {user?.role === "ADMIN" ? "کاربر ارشد" : "دبیر"}
             {user?.teacher ? ` / ${user.teacher.firstName} ${user.teacher.lastName}` : ""}
