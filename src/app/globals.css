@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0b1f33;
+  --color-navy-soft: #14324f;
+  --color-gold: #c4a35a;
+  --color-gold-dark: #9a7a32;
+  --color-cream: #f4efe4;
+  --color-paper: #fffdf8;
+  --color-ink: #1c2430;
+  --color-muted: #5b6573;
+  --color-line: #e4dccb;
+  --color-success: #1f7a5c;
+  --color-danger: #b42318;
+  --color-warn: #b45309;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
+
+* {
+  font-family: var(--font-vazir), Vazirmatn, Tahoma, sans-serif;
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+.official-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 10px 30px rgba(11, 31, 51, 0.06);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+table.data th,
+table.data td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.75rem 0.85rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+table.data th {
+  background: #f8f3e8;
+  color: var(--color-navy);
+  font-weight: 700;
+}
+
+table.data tr:hover td {
+  background: #fbf8f1;
+}
+
+table.lesson-grid {
+  table-layout: fixed;
+  min-width: 720px;
+}
+
+table.lesson-grid th,
+table.lesson-grid td {
+  white-space: normal;
+  vertical-align: top;
+}
+
+table.lesson-grid td.day-label {
+  width: 7rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.lesson-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lesson-cell input,
+.lesson-cell select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}

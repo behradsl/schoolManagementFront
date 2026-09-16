@@ -1,0 +1,111 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { api, getStoredUser } from "@/lib/api";
+import { JalaliDatePicker, PageHeader, Select } from "@/components/ui";
+import { fullName, todayJalali } from "@/lib/format";
+
+type Session = {
+  lessonId: string;
+  date: string;
+  cycleDay: number;
+  courseName: string;
+  class: { id: string; name: string };
+  timeSlot: { name: string; startTime: string; endTime: string };
+  teacher: { firstName: string; lastName: string };
+};
+
+type ScheduleResponse = {
+  date: string;
+  dateInfo: { isLeap: boolean; yearLength: number; dayOfYear: number; year: number };
+  sessions: Session[];
+};
+
+export default function SchedulePage() {
+  const router = useRouter();
+  const [role, setRole] = useState<"ADMIN" | "TEACHER" | null>(null);
+  const [date, setDate] = useState("");
+  const [classId, setClassId] = useState("");
+  const [teacherId, setTeacherId] = useState("");
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [data, setData] = useState<ScheduleResponse | null>(null);
+
+  async function load() {
+    const qs = new URLSearchParams({ date });
+    if (classId) qs.set("classId", classId);
+    if (teacherId && role === "ADMIN") qs.set("teacherId", teacherId);
+    setData(await api<ScheduleResponse>(`/schedule?${qs.toString()}`));
+  }
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    setRole(stored?.role ?? null);
+    setDate(todayJalali());
+    if (stored?.role === "ADMIN") {
+      api<Array<{ id: string; name: string }>>("/classes").then(setClasses).catch(() => undefined);
+      api<Array<{ id: string; firstName: string; lastName: string }>>("/teachers").then(setTeachers).catch(() => undefined);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!date) return;
+    load().catch(() => undefined);
+  }, [date, classId, teacherId]);
+
+  return (
+    <div>
+      <PageHeader
+        title="برنامه روزانه و حضور و غیاب"
+        subtitle="با انتخاب هر ساعت آموزشی، فهرست دانش‌آموزان و ثبت حضور نمایش داده می‌شود."
+      />
+      <div className="official-card mb-6 grid grid-cols-1 gap-3 rounded-xl p-4 md:grid-cols-4">
+        <JalaliDatePicker label="تاریخ" value={date} onChange={setDate} />
+        {role === "ADMIN" && (
+          <>
+            <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <option value="">همه کلاس‌ها</option>
+              {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Select label="دبیر" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+              <option value="">همه دبیران</option>
+              {teachers.map((t) => <option key={t.id} value={t.id}>{fullName(t)}</option>)}
+            </Select>
+          </>
+        )}
+        {data?.dateInfo && (
+          <div className="flex items-end text-sm text-muted">
+            روز {data.dateInfo.dayOfYear} از {data.dateInfo.yearLength} سال {data.dateInfo.year}
+            {data.dateInfo.isLeap ? " (کبیسه)" : ""}
+          </div>
+        )}
+      </div>
+      <div className="grid gap-3">
+        {data?.sessions.length === 0 && (
+          <div className="official-card rounded-xl p-8 text-center text-muted">برای این تاریخ ساعت آموزشی ثبت نشده است.</div>
+        )}
+        {data?.sessions.map((session) => (
+          <button
+            key={session.lessonId}
+            className="official-card rounded-xl p-5 text-right hover:border-gold"
+            onClick={() => router.push(`/attendance?lessonId=${session.lessonId}&date=${session.date}`)}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-lg font-bold text-navy">{session.courseName}</div>
+                <div className="text-sm text-muted">
+                  {session.class.name} · {session.timeSlot.name} · {fullName(session.teacher)}
+                </div>
+              </div>
+              <div className="text-sm text-navy">
+                {session.timeSlot.startTime} تا {session.timeSlot.endTime}
+                <div className="text-xs text-muted">روز {session.cycleDay} سیکل</div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
