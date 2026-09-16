@@ -99,7 +99,34 @@ export default function AttendanceClient() {
           اطلاع‌رسانی پیامکی غیبت غیرموجه به والدین
         </label>
       </div>
-      <div className="official-card table-wrap rounded-xl">
+      <div className="space-y-3 md:hidden">
+        {session.students.map((row) => {
+          const rec = records[row.student.id];
+          return (
+            <div key={row.student.id} className="official-card rounded-xl p-4">
+              <div className="font-bold text-navy">{fullName(row.student)}</div>
+              <div className="mb-3 text-xs text-muted">{row.student.nationalCode}</div>
+              <div className="flex flex-wrap gap-1">
+                {STATUSES.map((status) => (
+                  <button
+                    key={status}
+                    className={`min-h-10 min-w-16 rounded-full px-3 py-2 text-sm ${rec?.status === status ? "bg-navy text-white" : "bg-cream text-navy"}`}
+                    onClick={() => setRecords({ ...records, [row.student.id]: { ...rec, status } })}
+                  >
+                    {STATUS_LABEL[status]}
+                  </button>
+                ))}
+              </div>
+              {rec?.status !== "PRESENT" && (
+                <Button variant="outline" className="mt-3 w-full" onClick={() => setJustFor(row.student.id)}>
+                  {rec?.justificationType ? JUST_LABEL[rec.justificationType] : "ثبت توجیه"}
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="official-card table-wrap hidden rounded-xl md:block">
         <table className="data">
           <thead>
             <tr>
