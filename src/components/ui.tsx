@@ -1,47 +1,23 @@
 "use client";
 
 import { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, useState } from "react";
-import DatePicker from "react-multi-date-picker";
-import persian from "react-date-object/calendars/persian";
-import persian_fa from "react-date-object/locales/persian_fa";
-import { toEnglishDigits } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/button";
 
-export function Button({
-  children,
-  variant = "primary",
-  className = "",
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "ghost" | "danger" | "gold" | "outline";
-}) {
-  const styles = {
-    primary: "bg-navy text-white hover:bg-navy-soft",
-    gold: "bg-gold text-navy hover:bg-gold-dark hover:text-white",
-    ghost: "bg-transparent text-navy hover:bg-cream",
-    danger: "bg-danger text-white hover:opacity-90",
-    outline: "border border-line bg-white text-navy hover:bg-cream",
-  }[variant];
-  return (
-    <button
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${styles} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
+export { Button } from "@/components/button";
+export { Loading } from "@/components/loading";
+
+const fieldClass =
+  "w-full rounded-md border border-line bg-paper px-3 py-2 text-ink outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-navy";
 
 export function Input(
   props: InputHTMLAttributes<HTMLInputElement> & { label?: string },
 ) {
-  const { label, className = "", ...rest } = props;
+  const { label, className = "", id, ...rest } = props;
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" htmlFor={id}>
       {label && <span className="mb-1.5 block text-muted">{label}</span>}
-      <input
-        className={`w-full rounded-md border border-line bg-white px-3 py-2 outline-none ring-gold/30 focus:ring-2 ${className}`}
-        {...rest}
-      />
+      <input id={id} className={cn(fieldClass, className)} {...rest} />
     </label>
   );
 }
@@ -49,14 +25,11 @@ export function Input(
 export function Textarea(
   props: TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string },
 ) {
-  const { label, className = "", ...rest } = props;
+  const { label, className = "", id, ...rest } = props;
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" htmlFor={id}>
       {label && <span className="mb-1.5 block text-muted">{label}</span>}
-      <textarea
-        className={`min-h-24 w-full rounded-md border border-line bg-white px-3 py-2 outline-none ring-gold/30 focus:ring-2 ${className}`}
-        {...rest}
-      />
+      <textarea id={id} className={cn("min-h-24", fieldClass, className)} {...rest} />
     </label>
   );
 }
@@ -65,49 +38,15 @@ export function Select({
   label,
   children,
   className = "",
+  id,
   ...rest
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" htmlFor={id}>
       {label && <span className="mb-1.5 block text-muted">{label}</span>}
-      <select
-        className={`w-full rounded-md border border-line bg-white px-3 py-2 outline-none ring-gold/30 focus:ring-2 ${className}`}
-        {...rest}
-      >
+      <select id={id} className={cn(fieldClass, className)} {...rest}>
         {children}
       </select>
-    </label>
-  );
-}
-
-export function JalaliDatePicker({
-  label,
-  value,
-  onChange,
-}: {
-  label?: string;
-  value?: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="block text-sm">
-      {label && <span className="mb-1.5 block text-muted">{label}</span>}
-      <DatePicker
-        value={value}
-        calendar={persian}
-        locale={persian_fa}
-        format="YYYY/MM/DD"
-        containerClassName="w-full"
-        inputClass="w-full rounded-md border border-line bg-white px-3 py-2 outline-none ring-gold/30 focus:ring-2"
-        onChange={(date) => {
-          if (!date) {
-            onChange("");
-            return;
-          }
-          const formatted = Array.isArray(date) ? date[0]?.format("YYYY/MM/DD") : date.format("YYYY/MM/DD");
-          onChange(toEnglishDigits(formatted || ""));
-        }}
-      />
     </label>
   );
 }
@@ -127,16 +66,28 @@ export function Modal({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
-        className={`official-card max-h-[90vh] w-full overflow-y-auto rounded-xl p-6 ${wide ? "max-w-5xl" : "max-w-3xl"}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        className={cn(
+          "official-card max-h-[90vh] w-full overflow-y-auto rounded-md p-6",
+          wide ? "max-w-5xl" : "max-w-3xl",
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between border-b border-line pb-3">
-          <h3 className="text-lg font-bold text-navy">{title}</h3>
-          <button onClick={onClose} className="text-muted hover:text-navy">
+          <h3 id="dialog-title" className="text-lg font-bold text-navy">
+            {title}
+          </h3>
+          <Button type="button" variant="ghost" onClick={onClose} aria-label="بستن">
             بستن
-          </button>
+          </Button>
         </div>
         {children}
       </div>
@@ -156,8 +107,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold text-navy">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        <h1 className="text-2xl font-bold leading-8 text-navy">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm leading-7 text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -168,9 +119,11 @@ export function Alert({ message, type = "error" }: { message?: string; type?: "e
   if (!message) return null;
   return (
     <div
-      className={`rounded-md px-3 py-2 text-sm ${
-        type === "error" ? "bg-red-50 text-danger" : "bg-emerald-50 text-success"
-      }`}
+      role="alert"
+      className={cn(
+        "mb-3 rounded-md px-3 py-2 text-sm",
+        type === "error" ? "bg-danger/10 text-danger" : "bg-success/10 text-success",
+      )}
     >
       {message}
     </div>
@@ -185,12 +138,12 @@ export function FileButton({
   onFile: (file: File) => void;
 }) {
   return (
-    <label className="inline-flex cursor-pointer items-center rounded-md border border-line bg-white px-4 py-2 text-sm hover:bg-cream">
+    <label className="inline-flex cursor-pointer items-center rounded-md border border-line bg-paper px-3.5 py-2 text-sm font-medium text-navy transition-colors hover:bg-slate focus-within:ring-2 focus-within:ring-navy">
       {label}
       <input
         type="file"
         accept=".xlsx,.xls"
-        className="hidden"
+        className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onFile(file);
@@ -219,8 +172,9 @@ export function FormGrid({
   );
 }
 
-export function useBusy() {
+export function useBusy(initialLoading = false) {
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(initialLoading);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   async function run<T>(fn: () => Promise<T>, ok?: string) {
@@ -238,5 +192,36 @@ export function useBusy() {
       setBusy(false);
     }
   }
-  return { busy, error, success, setError, setSuccess, run };
+  async function loadData<T>(fn: () => Promise<T>) {
+    setLoading(true);
+    setError("");
+    try {
+      return await fn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "خطا");
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }
+  return { busy, loading, error, success, setError, setSuccess, run, loadData };
 }
+
+export const statusButtonClass = {
+  PRESENT: {
+    active: "bg-success text-white hover:bg-success/90",
+    idle: "border border-success/30 bg-paper text-success hover:bg-success/10",
+  },
+  ABSENT: {
+    active: "bg-danger text-white hover:bg-danger/90",
+    idle: "border border-danger/30 bg-paper text-danger hover:bg-danger/10",
+  },
+  DELAY: {
+    active: "bg-warn text-white hover:bg-warn/90",
+    idle: "border border-warn/30 bg-paper text-warn hover:bg-warn/10",
+  },
+  RUSH: {
+    active: "bg-warn text-white hover:bg-warn/90",
+    idle: "border border-warn/30 bg-paper text-warn hover:bg-warn/10",
+  },
+} as const;

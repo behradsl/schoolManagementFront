@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { Alert, Button, PageHeader, useBusy } from "@/components/ui";
+import { Alert, Button, Loading, PageHeader, useBusy } from "@/components/ui";
 import { fullName } from "@/lib/format";
 
 type Teacher = { id: string; firstName: string; lastName: string };
@@ -64,7 +64,7 @@ export default function ClassCyclePage() {
     }), "برنامه دروس ذخیره شد");
   }
 
-  if (!data) return <div>در حال بارگذاری...</div>;
+  if (!data) return <Loading label="در حال دریافت برنامه کلاس..." />;
 
   return (
     <div>
@@ -73,7 +73,9 @@ export default function ClassCyclePage() {
         subtitle={`${data.cycle.name} از ${data.startDate} تا ${data.endDate}`}
         actions={
           <>
-            <Link href="/cycles"><Button variant="outline">بازگشت</Button></Link>
+            <Button asChild variant="outline">
+              <Link href="/cycles">بازگشت</Link>
+            </Button>
             <Button onClick={save} disabled={busy}>ذخیره برنامه</Button>
           </>
         }
@@ -84,11 +86,11 @@ export default function ClassCyclePage() {
         {days.map((day) => {
           const daySlots = data.cycle.timeSlots.filter((slot) => slot.cycleDay === day);
           return (
-            <section key={day} className="official-card rounded-xl p-4">
+            <section key={day} className="official-card rounded-md p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="font-bold text-navy">روز {day} سیکل</h3>
                 {daySlots.length === 0 && (
-                  <span className="rounded-full bg-cream px-3 py-1 text-xs text-muted">بدون ساعت آموزشی</span>
+                  <span className="rounded-md bg-slate px-3 py-1 text-xs text-muted">بدون ساعت آموزشی</span>
                 )}
               </div>
               {daySlots.length === 0 ? (
@@ -99,7 +101,7 @@ export default function ClassCyclePage() {
                     const key = `${day}:${slot.id}`;
                     const cell = grid[key] || { courseName: "", teacherId: "" };
                     return (
-                      <div key={slot.id} className="lesson-cell rounded-lg border border-line bg-cream/50 p-3">
+                      <div key={slot.id} className="lesson-cell rounded-md border border-line bg-cream/50 p-3">
                         <div className="text-sm font-bold text-navy">{slot.name}</div>
                         <div className="text-xs text-muted">{slot.startTime} تا {slot.endTime}</div>
                         <input

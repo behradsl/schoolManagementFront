@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api, downloadFile, getStoredUser } from "@/lib/api";
-import { Alert, Button, Input, JalaliDatePicker, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, Input, Loading, PageHeader, Select, useBusy } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
+import { ResponsiveRecords } from "@/components/responsive-records";
 import { fullName } from "@/lib/format";
 
 type ReportMode = "all" | "absent";
@@ -41,7 +43,7 @@ export default function ReportsPage() {
   const [teachers, setTeachers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
   const [options, setOptions] = useState<ReportOptions>({ students: [], timeSlots: [] });
   const [data, setData] = useState<Report | null>(null);
-  const { error, run } = useBusy();
+  const { error, loading, loadData } = useBusy(true);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -67,7 +69,7 @@ export default function ReportsPage() {
   }
 
   async function load() {
-    await run(async () => {
+    await loadData(async () => {
       setData(await api<Report>(`/reports/attendance?${query()}`));
     });
   }
@@ -93,7 +95,7 @@ export default function ReportsPage() {
         <Button variant={mode === "all" ? "primary" : "outline"} onClick={() => { setMode("all"); }}>همه وضعیت‌ها</Button>
         <Button variant={mode === "absent" ? "primary" : "outline"} onClick={() => { setMode("absent"); }}>فقط غیبت</Button>
       </div>
-      <div className="official-card mb-6 grid grid-cols-1 gap-3 rounded-xl p-4 md:grid-cols-3">
+      <div className="official-card mb-6 grid grid-cols-1 gap-3 rounded-md p-4 md:grid-cols-3">
         <JalaliDatePicker label="از تاریخ" value={from} onChange={setFrom} />
         <JalaliDatePicker label="تا تاریخ" value={to} onChange={setTo} />
         <Select label="ساعت آموزشی" value={timeSlotName} onChange={(e) => setTimeSlotName(e.target.value)}>
@@ -139,48 +141,30 @@ export default function ReportsPage() {
                 ["تعجیل", data.summary.rush],
               ]
           ).map(([label, value]) => (
-            <div key={String(label)} className="official-card rounded-lg p-3">
+            <div key={String(label)} className="official-card rounded-md p-3">
               <div className="text-xs text-muted">{label}</div>
               <div className="text-xl font-bold text-navy">{value}</div>
             </div>
           ))}
         </div>
       )}
-      <div className="official-card table-wrap rounded-xl">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>تاریخ</th>
-              <th>دانش‌آموز</th>
-              <th>کلاس</th>
-              <th>درس</th>
-              <th>دبیر</th>
-              <th>ساعت</th>
-              <th>وضعیت</th>
-              <th>توجیه</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.rows.length === 0 && (
-              <tr>
-                <td colSpan={8} className="py-8 text-center text-muted">برای این بازه و ساعت آموزشی رکوردی یافت نشد.</td>
-              </tr>
-            )}
-            {data?.rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.date}</td>
-                <td>{fullName(row.student)}</td>
-                <td>{row.class.name}</td>
-                <td>{row.courseName}</td>
-                <td>{fullName(row.teacher)}</td>
-                <td>{row.timeSlot.name} ({row.timeSlot.startTime} تا {row.timeSlot.endTime})</td>
-                <td>{row.statusLabel}</td>
-                <td>{row.justification?.typeLabel || "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? <Loading label="در حال تهیه گزارش..." /> : (
+      <ResponsiveRecords
+        rows={data?.rows ?? []}
+        rowKey={(row) => row.id}
+        empty="برای این بازه و ساعت آموزشی رکوردی یافت نشد."
+        columns={[
+          { id: "date", header: "تاریخ", primary: true, cell: (row) => row.date },
+          { id: "student", header: "دانش‌آموز", cell: (row) => fullName(row.student) },
+          { id: "class", header: "کلاس", cell: (row) => row.class.name },
+          { id: "course", header: "درس", cell: (row) => row.courseName },
+          { id: "teacher", header: "دبیر", cell: (row) => fullName(row.teacher) },
+          { id: "slot", header: "ساعت", cell: (row) => `${row.timeSlot.name} (${row.timeSlot.startTime} تا ${row.timeSlot.endTime})` },
+          { id: "status", header: "وضعیت", cell: (row) => row.statusLabel },
+          { id: "just", header: "توجیه", cell: (row) => row.justification?.typeLabel || "-" },
+        ]}
+      />
+      )}
     </div>
   );
 }

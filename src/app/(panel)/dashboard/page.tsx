@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, getStoredUser } from "@/lib/api";
+import { Button } from "@/components/button";
+import { Loading } from "@/components/loading";
 import { PageHeader } from "@/components/ui";
 
 type Stats = {
@@ -15,10 +17,14 @@ type Stats = {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [role, setRole] = useState<"ADMIN" | "TEACHER" | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setRole(getStoredUser()?.role ?? null);
-    api<Stats>("/reports/dashboard").then(setStats).catch(() => undefined);
+    api<Stats>("/reports/dashboard")
+      .then(setStats)
+      .catch(() => undefined)
+      .finally(() => setLoading(false));
   }, []);
 
   const cards = [
@@ -38,21 +44,36 @@ export default function DashboardPage() {
             : "مدیریت جامع اطلاعات آموزشی و حضور و غیاب"
         }
       />
+      {loading ? (
+        <Loading label="در حال دریافت آمار..." />
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards
           .filter((card) => role === "ADMIN" || card.label === "غیبت امروز")
           .map((card) => (
-            <Link key={card.label} href={card.href} className="official-card rounded-xl p-5">
-              <div className="text-sm text-muted">{card.label}</div>
-              <div className="mt-3 text-3xl font-black text-navy">{card.value}</div>
-            </Link>
+            <Button
+              key={card.label}
+              asChild
+              variant="outline"
+              className="h-auto flex-col items-stretch rounded-md p-5 text-start hover:border-navy"
+            >
+              <Link href={card.href}>
+                <div className="text-sm font-medium text-muted">{card.label}</div>
+                <div className="mt-3 text-3xl font-bold text-navy">{card.value}</div>
+                <div className="mt-3 text-xs text-navy">مشاهده جزئیات</div>
+              </Link>
+            </Button>
           ))}
       </div>
-      <div className="official-card mt-6 rounded-xl p-6">
+      )}
+      <div className="official-card mt-6 rounded-md p-6">
         <h2 className="mb-2 font-bold text-navy">دسترسی سریع</h2>
         <p className="text-sm leading-7 text-muted">
           از بخش «برنامه و حضور» می‌توانید ساعات آموزشی روز را به تفکیک کلاس یا دبیر ببینید و با انتخاب هر جلسه، وضعیت حاضر، غایب، تأخیر یا تعجیل دانش‌آموزان را ثبت کنید.
         </p>
+        <Button asChild className="mt-4">
+          <Link href="/schedule">رفتن به برنامه و حضور</Link>
+        </Button>
       </div>
     </div>
   );

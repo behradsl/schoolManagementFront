@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Button, FormGrid, Input, Modal, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, FormGrid, Input, Loading, Modal, PageHeader, Select, useBusy } from "@/components/ui";
+import { ResponsiveRecords } from "@/components/responsive-records";
 import { fullName } from "@/lib/format";
 
 type UserRow = {
@@ -14,18 +15,20 @@ type UserRow = {
 };
 type Teacher = { id: string; firstName: string; lastName: string };
 
-const empty = { username: "", password: "", role: "TEACHER" as const, teacherId: "" };
+const empty = { username: "", password: "", role: "TEACHER" as "ADMIN" | "TEACHER", teacherId: "" };
 
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
-  const { busy, error, run } = useBusy();
+  const { busy, error, run, loading, loadData } = useBusy(true);
 
   async function load() {
-    setRows(await api<UserRow[]>("/users"));
-    setTeachers(await api<Teacher[]>("/teachers"));
+    await loadData(async () => {
+      setRows(await api<UserRow[]>("/users"));
+      setTeachers(await api<Teacher[]>("/teachers"));
+    }).catch(() => undefined);
   }
   useEffect(() => { load().catch(() => undefined); }, []);
 
@@ -47,34 +50,24 @@ export default function UsersPage() {
         actions={<Button onClick={() => setOpen(true)}>کاربر جدید</Button>}
       />
       <Alert message={error} />
-      <div className="official-card table-wrap rounded-xl">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>نام کاربری</th>
-              <th>نقش</th>
-              <th>دبیر مرتبط</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.username}</td>
-                <td>{row.role === "ADMIN" ? "کاربر ارشد" : "دبیر"}</td>
-                <td>{row.teacher ? fullName(row.teacher) : "-"}</td>
-                <td>
-                  <Button variant="danger" onClick={async () => {
-                    if (!confirm("حذف کاربر؟")) return;
-                    await api(`/users/${row.id}`, { method: "DELETE" });
-                    await load();
-                  }}>حذف</Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? <Loading label="در حال دریافت کاربران..." /> : (
+      <ResponsiveRecords
+        rows={rows}
+        rowKey={(row) => row.id}
+        columns={[
+          { id: "username", header: "نام کاربری", primary: true, cell: (row) => row.username },
+          { id: "role", header: "نقش", cell: (row) => row.role === "ADMIN" ? "کاربر ارشد" : "دبیر" },
+          { id: "teacher", header: "دبیر مرتبط", cell: (row) => row.teacher ? fullName(row.teacher) : "-" },
+        ]}
+        actions={(row) => (
+          <Button variant="danger" onClick={async () => {
+            if (!confirm("حذف کاربر؟")) return;
+            await api(`/users/${row.id}`, { method: "DELETE" });
+            await load();
+          }}>حذف</Button>
+        )}
+      />
+      )}
       <Modal open={open} title="تعریف کاربر" onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
           <Input label="نام کاربری" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />

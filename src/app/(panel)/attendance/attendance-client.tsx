@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { Alert, Button, Modal, PageHeader, Select, Textarea, useBusy } from "@/components/ui";
+import { Alert, Button, Loading, Modal, PageHeader, Select, Textarea, statusButtonClass, useBusy } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { JUST_LABEL, STATUS_LABEL, fullName } from "@/lib/format";
 
 type Status = "PRESENT" | "ABSENT" | "DELAY" | "RUSH";
@@ -25,7 +27,6 @@ const STATUSES: Status[] = ["PRESENT", "ABSENT", "DELAY", "RUSH"];
 
 export default function AttendanceClient() {
   const search = useSearchParams();
-  const router = useRouter();
   const lessonId = search.get("lessonId") || "";
   const date = search.get("date") || "";
   const [session, setSession] = useState<Session | null>(null);
@@ -75,7 +76,7 @@ export default function AttendanceClient() {
     }), "حضور و غیاب ذخیره شد");
   }
 
-  if (!session) return <div>در حال بارگذاری...</div>;
+  if (!session) return <Loading label="در حال دریافت فهرست دانش‌آموزان..." />;
 
   return (
     <div>
@@ -84,7 +85,9 @@ export default function AttendanceClient() {
         subtitle={`${session.lesson.class.name} · ${session.date} · ${session.lesson.timeSlot.name} (${session.lesson.timeSlot.startTime} تا ${session.lesson.timeSlot.endTime}) · ${fullName(session.lesson.teacher)}`}
         actions={
           <>
-            <Button variant="outline" onClick={() => router.push("/schedule")}>بازگشت به برنامه</Button>
+            <Button asChild variant="outline">
+              <Link href="/schedule">بازگشت به برنامه</Link>
+            </Button>
             <Button onClick={save} disabled={busy}>ذخیره</Button>
           </>
         }
@@ -103,14 +106,19 @@ export default function AttendanceClient() {
         {session.students.map((row) => {
           const rec = records[row.student.id];
           return (
-            <div key={row.student.id} className="official-card rounded-xl p-4">
+            <div key={row.student.id} className="official-card rounded-md p-4">
               <div className="font-bold text-navy">{fullName(row.student)}</div>
               <div className="mb-3 text-xs text-muted">{row.student.nationalCode}</div>
               <div className="flex flex-wrap gap-1">
                 {STATUSES.map((status) => (
                   <button
                     key={status}
-                    className={`min-h-10 min-w-16 rounded-full px-3 py-2 text-sm ${rec?.status === status ? "bg-navy text-white" : "bg-cream text-navy"}`}
+                    type="button"
+                    aria-pressed={rec?.status === status}
+                    className={cn(
+                      "min-h-10 min-w-16 rounded-md px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy",
+                      rec?.status === status ? statusButtonClass[status].active : statusButtonClass[status].idle,
+                    )}
                     onClick={() => setRecords({ ...records, [row.student.id]: { ...rec, status } })}
                   >
                     {STATUS_LABEL[status]}
@@ -126,7 +134,7 @@ export default function AttendanceClient() {
           );
         })}
       </div>
-      <div className="official-card table-wrap hidden rounded-xl md:block">
+      <div className="official-card table-wrap hidden rounded-md md:block">
         <table className="data">
           <thead>
             <tr>
@@ -148,7 +156,12 @@ export default function AttendanceClient() {
                       {STATUSES.map((status) => (
                         <button
                           key={status}
-                          className={`rounded-full px-3 py-1 text-xs ${rec?.status === status ? "bg-navy text-white" : "bg-cream text-navy"}`}
+                          type="button"
+                          aria-pressed={rec?.status === status}
+                          className={cn(
+                            "rounded-md px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy",
+                            rec?.status === status ? statusButtonClass[status].active : statusButtonClass[status].idle,
+                          )}
                           onClick={() => setRecords({ ...records, [row.student.id]: { ...rec, status } })}
                         >
                           {STATUS_LABEL[status]}

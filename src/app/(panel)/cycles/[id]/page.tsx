@@ -4,7 +4,8 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { Alert, Button, FormGrid, Input, JalaliDatePicker, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, FormGrid, Input, Loading, PageHeader, Select, useBusy } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { jalaliMeta } from "@/lib/format";
 
 type CycleDetail = {
@@ -32,12 +33,14 @@ export default function CycleDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startCycleDay, setStartCycleDay] = useState(1);
-  const { busy, error, run } = useBusy();
+  const { busy, error, run, loading, loadData } = useBusy(true);
   const meta = jalaliMeta(startDate);
 
   async function load() {
-    setCycle(await api<CycleDetail>(`/cycles/${params.id}`));
-    setClasses(await api<SchoolClass[]>("/classes"));
+    await loadData(async () => {
+      setCycle(await api<CycleDetail>(`/cycles/${params.id}`));
+      setClasses(await api<SchoolClass[]>("/classes"));
+    }).catch(() => undefined);
   }
   useEffect(() => { load().catch(() => undefined); }, [params.id]);
 
@@ -59,17 +62,17 @@ export default function CycleDetailPage() {
     });
   }
 
-  if (!cycle) return <div>در حال بارگذاری...</div>;
+  if (loading || !cycle) return <Loading label="در حال دریافت سیکل..." />;
 
   return (
     <div>
       <PageHeader
         title={cycle.name}
         subtitle={`سیکل ${cycle.dayCount} روزه — ساعات هر روز سیکل می‌تواند متفاوت باشد. هنگام اختصاص به کلاس مشخص کنید روز شروع سیکل با کدام روز تقویم شمسی متناظر است.`}
-        actions={<Link href="/cycles"><Button variant="outline">بازگشت</Button></Link>}
+        actions={<Button asChild variant="outline"><Link href="/cycles">بازگشت</Link></Button>}
       />
       <Alert message={error} />
-      <div className="official-card mb-6 rounded-xl p-5">
+      <div className="official-card mb-6 rounded-md p-5">
         <h3 className="mb-3 font-bold text-navy">ساعات هر روز سیکل</h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: cycle.dayCount }, (_, i) => i + 1).map((day) => {
@@ -91,7 +94,7 @@ export default function CycleDetailPage() {
           })}
         </div>
       </div>
-      <div className="official-card mb-6 rounded-xl p-5">
+      <div className="official-card mb-6 rounded-md p-5">
         <h3 className="mb-4 font-bold text-navy">اختصاص سیکل به کلاس</h3>
         <FormGrid onSubmit={assign}>
           <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)} required>
@@ -124,7 +127,7 @@ export default function CycleDetailPage() {
       </div>
       <div className="space-y-3">
         {cycle.classCycles.map((item) => (
-          <div key={item.id} className="official-card flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div key={item.id} className="official-card flex flex-col gap-3 rounded-md p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="font-bold text-navy">{item.class.name}{item.class.studyYear?.name ? ` — ${item.class.studyYear.name}` : ""}</div>
               <div className="text-sm text-muted">
@@ -132,9 +135,9 @@ export default function CycleDetailPage() {
                 {item.startDateInfo ? ` (سال ${item.startDateInfo.yearLength} روزه)` : ""}
               </div>
             </div>
-            <Link href={`/class-cycles/${item.id}`}>
-              <Button>تعیین دروس و دبیران</Button>
-            </Link>
+            <Button asChild>
+              <Link href={`/class-cycles/${item.id}`}>تعیین دروس و دبیران</Link>
+            </Button>
           </div>
         ))}
       </div>

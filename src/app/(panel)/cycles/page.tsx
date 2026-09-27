@@ -8,13 +8,14 @@ import {
   Button,
   FormGrid,
   Input,
-  JalaliDatePicker,
+  Loading,
   Modal,
   PageHeader,
   Select,
   Textarea,
   useBusy,
 } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { EXCEPTION_LABEL } from "@/lib/format";
 
 type TimeSlot = {
@@ -82,16 +83,18 @@ export default function CyclesPage() {
   const [holidayStart, setHolidayStart] = useState("");
   const [holidayEnd, setHolidayEnd] = useState("");
   const [holidayNote, setHolidayNote] = useState("");
-  const { busy, error, success, run } = useBusy();
+  const { busy, error, success, run, loading, loadData } = useBusy(true);
   const days = useMemo(() => Array.from({ length: Number(dayCount) || 1 }, (_, i) => i + 1), [dayCount]);
 
   async function load() {
-    const [cycleRows, holidayRows] = await Promise.all([
-      api<Cycle[]>("/cycles"),
-      api<CalendarException[]>("/calendar-exceptions"),
-    ]);
-    setRows(cycleRows);
-    setExceptions(holidayRows);
+    await loadData(async () => {
+      const [cycleRows, holidayRows] = await Promise.all([
+        api<Cycle[]>("/cycles"),
+        api<CalendarException[]>("/calendar-exceptions"),
+      ]);
+      setRows(cycleRows);
+      setExceptions(holidayRows);
+    }).catch(() => undefined);
   }
   useEffect(() => {
     load().catch(() => undefined);
@@ -214,8 +217,9 @@ export default function CyclesPage() {
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
-
-      <section className="official-card mb-6 rounded-xl p-5">
+      {loading ? <Loading label="در حال دریافت سیکل‌ها..." /> : (
+      <>
+      <section className="official-card mb-6 rounded-md p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-bold text-navy">تعطیلات و روزهای خاص</h2>
@@ -228,7 +232,7 @@ export default function CyclesPage() {
         )}
         <div className="grid gap-3">
           {exceptions.map((item) => (
-            <div key={item.id} className="flex flex-col gap-3 rounded-lg border border-line bg-cream/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div key={item.id} className="flex flex-col gap-3 rounded-md border border-line bg-cream/60 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="font-bold text-navy">{item.title}</div>
                 <div className="text-sm text-muted">
@@ -247,14 +251,16 @@ export default function CyclesPage() {
 
       <div className="grid gap-4">
         {rows.map((row) => (
-          <div key={row.id} className="official-card rounded-xl p-5">
+          <div key={row.id} className="official-card rounded-md p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-lg font-bold text-navy">{row.name}</h3>
                 <p className="text-sm text-muted">{row.dayCount} روز در هر سیکل</p>
               </div>
-              <div className="flex gap-2">
-                <Link href={`/cycles/${row.id}`}><Button>جزئیات و اختصاص به کلاس</Button></Link>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <Link href={`/cycles/${row.id}`}>جزئیات و اختصاص به کلاس</Link>
+                </Button>
                 <Button variant="outline" onClick={() => startEdit(row)}>ویرایش</Button>
               </div>
             </div>
@@ -262,6 +268,8 @@ export default function CyclesPage() {
           </div>
         ))}
       </div>
+      </>
+      )}
 
       <Modal open={open} title={editing ? "ویرایش سیکل" : "ثبت سیکل"} onClose={() => setOpen(false)} wide>
         <FormGrid onSubmit={save}>
@@ -280,7 +288,7 @@ export default function CyclesPage() {
             {days.map((day) => {
               const daySlots = slotsForDay(day);
               return (
-                <div key={day} className="rounded-lg border border-line p-3">
+                <div key={day} className="rounded-md border border-line p-3">
                   <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h4 className="font-bold text-navy">روز {day} سیکل</h4>
                     <div className="flex flex-wrap gap-2">

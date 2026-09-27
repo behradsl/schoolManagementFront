@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, downloadFile, uploadFile } from "@/lib/api";
-import { Alert, Button, FileButton, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, FileButton, Loading, PageHeader, Select, useBusy } from "@/components/ui";
+import { ResponsiveRecords } from "@/components/responsive-records";
 import { fullName } from "@/lib/format";
 
 type Student = { id: string; firstName: string; lastName: string; nationalCode: string; studentNumber?: string | null };
@@ -32,7 +33,7 @@ export default function ClassDetailPage() {
   }
   useEffect(() => { load().catch(() => undefined); }, [params.id]);
 
-  if (!data) return <div>در حال بارگذاری...</div>;
+  if (!data) return <Loading label="در حال دریافت کلاس..." />;
 
   return (
     <div>
@@ -41,7 +42,9 @@ export default function ClassDetailPage() {
         subtitle={`${data.fieldOfStudy} — ${data.level} — سال ${data.studyYear?.name ?? data.studyingYearName} (${data.studyYear?.startDate} تا ${data.studyYear?.endDate})`}
         actions={
           <>
-            <Link href="/classes"><Button variant="outline">بازگشت</Button></Link>
+            <Button asChild variant="outline">
+              <Link href="/classes">بازگشت</Link>
+            </Button>
             <Button variant="outline" onClick={() => downloadFile(`/classes/${data.id}/students/excel/template`, "class-students-template.xlsx")}>
               قالب اکسل دانش‌آموزان کلاس
             </Button>
@@ -60,7 +63,7 @@ export default function ClassDetailPage() {
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
-      <div className="official-card mb-4 flex flex-col gap-2 rounded-xl p-4 sm:flex-row sm:items-end">
+      <div className="official-card mb-4 flex flex-col gap-2 rounded-md p-4 sm:flex-row sm:items-end">
         <div className="flex-1">
           <Select label="افزودن دانش‌آموز موجود" value={studentId} onChange={(e) => setStudentId(e.target.value)}>
             <option value="">انتخاب کنید</option>
@@ -80,37 +83,24 @@ export default function ClassDetailPage() {
           افزودن به کلاس
         </Button>
       </div>
-      <div className="official-card table-wrap rounded-xl">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>نام</th>
-              <th>نام خانوادگی</th>
-              <th>کد ملی</th>
-              <th>شماره دانش‌آموزی</th>
-              <th>بازه عضویت</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.students.map((s) => (
-              <tr key={s.id}>
-                <td>{s.firstName}</td>
-                <td>{s.lastName}</td>
-                <td>{s.nationalCode}</td>
-                <td>{s.studentNumber || "-"}</td>
-                <td>{s.enrollmentStart} تا {s.enrollmentEnd}</td>
-                <td>
-                  <Button variant="danger" onClick={async () => {
-                    await api(`/classes/${data.id}/students/${s.id}`, { method: "DELETE" });
-                    await load();
-                  }}>حذف از کلاس</Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ResponsiveRecords
+        rows={data.students}
+        rowKey={(s) => s.id}
+        empty="دانش‌آموزی در این کلاس ثبت نشده است."
+        columns={[
+          { id: "firstName", header: "نام", primary: true, cell: (s) => s.firstName },
+          { id: "lastName", header: "نام خانوادگی", cell: (s) => s.lastName },
+          { id: "nationalCode", header: "کد ملی", cell: (s) => s.nationalCode },
+          { id: "studentNumber", header: "شماره دانش‌آموزی", cell: (s) => s.studentNumber || "-" },
+          { id: "window", header: "بازه عضویت", cell: (s) => `${s.enrollmentStart} تا ${s.enrollmentEnd}` },
+        ]}
+        actions={(s) => (
+          <Button variant="danger" onClick={async () => {
+            await api(`/classes/${data.id}/students/${s.id}`, { method: "DELETE" });
+            await load();
+          }}>حذف از کلاس</Button>
+        )}
+      />
     </div>
   );
 }

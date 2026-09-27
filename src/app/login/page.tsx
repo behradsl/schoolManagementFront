@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setSession, AuthUser } from "@/lib/api";
 import { Alert, Button, Input } from "@/components/ui";
+import { Loading } from "@/components/loading";
+import { setNavPending } from "@/lib/nav-progress";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,34 +33,36 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       setSession(data.user);
+      setNavPending(true);
       router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "ورود ناموفق بود");
-    } finally {
       setBusy(false);
     }
   }
 
+  if (busy) {
+    return <Loading fullScreen label="در حال ورود به سامانه..." />;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1c3b5a,_#0b1f33)] p-4">
-      <div className="official-card w-full max-w-md rounded-2xl p-8">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1763bd,_#0d4f9c)] p-4">
+      <div className="official-card w-full max-w-md rounded-md p-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border-2 border-gold text-2xl font-black text-navy">
-            {schoolName.trim().charAt(0) || "م"}
-          </div>
-          <h1 className="text-xl font-bold text-navy">{schoolName}</h1>
-          <p className="mt-2 text-sm text-muted">ورود به پنل مدیریت و حضور و غیاب</p>
+          <h1 className="text-xl font-bold leading-8 text-navy">{schoolName}</h1>
+          <p className="mt-2 text-sm leading-7 text-muted">ورود به پنل مدیریت و حضور و غیاب</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
-          <Input label="نام کاربری" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <Input label="نام کاربری" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
           <Input
             label="رمز عبور"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <Alert message={error} />
-          <Button className="w-full" disabled={busy}>
+          <Button className="w-full" variant="gold" disabled={busy}>
             {busy ? "در حال ورود..." : "ورود"}
           </Button>
         </form>

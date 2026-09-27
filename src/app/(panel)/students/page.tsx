@@ -8,12 +8,14 @@ import {
   FileButton,
   FormGrid,
   Input,
-  JalaliDatePicker,
+  Loading,
   Modal,
   PageHeader,
   Textarea,
   useBusy,
 } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
+import { ResponsiveRecords } from "@/components/responsive-records";
 
 type Student = {
   id: string;
@@ -64,11 +66,13 @@ export default function StudentsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
   const [form, setForm] = useState(empty);
-  const { busy, error, success, run, setSuccess } = useBusy();
+  const { busy, error, success, run, setSuccess, loading, loadData } = useBusy(true);
 
   async function load() {
-    const data = await api<Student[]>(`/students${search ? `?search=${encodeURIComponent(search)}` : ""}`);
-    setRows(data);
+    await loadData(async () => {
+      const data = await api<Student[]>(`/students${search ? `?search=${encodeURIComponent(search)}` : ""}`);
+      setRows(data);
+    }).catch(() => undefined);
   }
 
   useEffect(() => {
@@ -126,56 +130,49 @@ export default function StudentsPage() {
         }
       />
       <div className="mb-4 flex gap-2">
-        <input
-          className="w-full max-w-sm rounded-md border border-line px-3 py-2"
-          placeholder="جستجو بر اساس نام، کد ملی یا شماره دانش‌آموزی"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="w-full max-w-sm">
+          <Input
+            placeholder="جستجو بر اساس نام، کد ملی یا شماره دانش‌آموزی"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="جستجوی دانش‌آموز"
+          />
+        </div>
         <Button variant="outline" onClick={() => load()}>جستجو</Button>
       </div>
       <Alert message={error} />
       <Alert message={success} type="success" />
-      <div className="official-card table-wrap rounded-xl">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>نام</th>
-              <th>نام خانوادگی</th>
-              <th>کد ملی</th>
-              <th>شماره دانش‌آموزی</th>
-              <th>تلفن</th>
-              <th>نام پدر</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.firstName}</td>
-                <td>{row.lastName}</td>
-                <td>{row.nationalCode}</td>
-                <td>{row.studentNumber || "-"}</td>
-                <td>{row.phoneNumber || "-"}</td>
-                <td>{row.fatherFirstName || "-"}</td>
-                <td className="space-x-2 space-x-reverse">
-                  <Button variant="ghost" onClick={() => openEdit(row)}>ویرایش</Button>
-                  <Button
-                    variant="danger"
-                    onClick={async () => {
-                      if (!confirm("حذف این دانش‌آموز؟")) return;
-                      await api(`/students/${row.id}`, { method: "DELETE" });
-                      await load();
-                    }}
-                  >
-                    حذف
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <Loading label="در حال دریافت دانش‌آموزان..." />
+      ) : (
+      <ResponsiveRecords
+        rows={rows}
+        rowKey={(row) => row.id}
+        columns={[
+          { id: "firstName", header: "نام", primary: true, cell: (row) => row.firstName },
+          { id: "lastName", header: "نام خانوادگی", cell: (row) => row.lastName },
+          { id: "nationalCode", header: "کد ملی", cell: (row) => row.nationalCode },
+          { id: "studentNumber", header: "شماره دانش‌آموزی", cell: (row) => row.studentNumber || "-" },
+          { id: "phoneNumber", header: "تلفن", cell: (row) => row.phoneNumber || "-" },
+          { id: "father", header: "نام پدر", cell: (row) => row.fatherFirstName || "-" },
+        ]}
+        actions={(row) => (
+          <>
+            <Button variant="outline" onClick={() => openEdit(row)}>ویرایش</Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                if (!confirm("حذف این دانش‌آموز؟")) return;
+                await api(`/students/${row.id}`, { method: "DELETE" });
+                await load();
+              }}
+            >
+              حذف
+            </Button>
+          </>
+        )}
+      />
+      )}
       <Modal open={open} title={editing ? "ویرایش دانش‌آموز" : "ثبت دانش‌آموز"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
           <Input label="نام" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />

@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api, downloadFile, uploadFile } from "@/lib/api";
-import { Alert, Button, FileButton, FormGrid, Input, Modal, PageHeader, useBusy } from "@/components/ui";
+import { Alert, Button, FileButton, FormGrid, Input, Loading, Modal, PageHeader, useBusy } from "@/components/ui";
+import { ResponsiveRecords } from "@/components/responsive-records";
 
 type Teacher = {
   id: string;
@@ -26,10 +27,12 @@ export default function TeachersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [form, setForm] = useState(empty);
-  const { busy, error, success, run, setSuccess } = useBusy();
+  const { busy, error, success, run, setSuccess, loading, loadData } = useBusy(true);
 
   async function load() {
-    setRows(await api<Teacher[]>("/teachers"));
+    await loadData(async () => {
+      setRows(await api<Teacher[]>("/teachers"));
+    }).catch(() => undefined);
   }
   useEffect(() => {
     load().catch(() => undefined);
@@ -72,39 +75,39 @@ export default function TeachersPage() {
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
-      <div className="official-card table-wrap rounded-xl">
-        <table className="data">
-          <thead>
-            <tr>
-              <th>نام</th>
-              <th>نام خانوادگی</th>
-              <th>کد پرسنلی</th>
-              <th>تلفن</th>
-              <th>رشته تدریس</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{row.firstName}</td>
-                <td>{row.lastName}</td>
-                <td>{row.personnelNumber}</td>
-                <td>{row.phoneNumber || "-"}</td>
-                <td>{row.teachingField || "-"}</td>
-                <td>
-                  <Button variant="ghost" onClick={() => { setEditing(row); setForm({ ...empty, ...row }); setOpen(true); }}>ویرایش</Button>
-                  <Button variant="danger" onClick={async () => {
-                    if (!confirm("حذف این دبیر؟")) return;
-                    await api(`/teachers/${row.id}`, { method: "DELETE" });
-                    await load();
-                  }}>حذف</Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? <Loading label="در حال دریافت دبیران..." /> : (
+      <ResponsiveRecords
+        rows={rows}
+        rowKey={(row) => row.id}
+        columns={[
+          { id: "firstName", header: "نام", primary: true, cell: (row) => row.firstName },
+          { id: "lastName", header: "نام خانوادگی", cell: (row) => row.lastName },
+          { id: "personnelNumber", header: "کد پرسنلی", cell: (row) => row.personnelNumber },
+          { id: "phoneNumber", header: "تلفن", cell: (row) => row.phoneNumber || "-" },
+          { id: "teachingField", header: "رشته تدریس", cell: (row) => row.teachingField || "-" },
+        ]}
+        actions={(row) => (
+          <>
+            <Button variant="outline" onClick={() => {
+              setEditing(row);
+              setForm({
+                firstName: row.firstName,
+                lastName: row.lastName,
+                phoneNumber: row.phoneNumber ?? "",
+                personnelNumber: row.personnelNumber,
+                teachingField: row.teachingField ?? "",
+              });
+              setOpen(true);
+            }}>ویرایش</Button>
+            <Button variant="danger" onClick={async () => {
+              if (!confirm("حذف این دبیر؟")) return;
+              await api(`/teachers/${row.id}`, { method: "DELETE" });
+              await load();
+            }}>حذف</Button>
+          </>
+        )}
+      />
+      )}
       <Modal open={open} title={editing ? "ویرایش دبیر" : "ثبت دبیر"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
           <Input label="نام" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />

@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Button, FormGrid, Input, JalaliDatePicker, Modal, PageHeader, Textarea, useBusy } from "@/components/ui";
+import { Alert, Button, FormGrid, Input, Loading, Modal, PageHeader, Textarea, useBusy } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
+import { ResponsiveRecords } from "@/components/responsive-records";
 
 type School = { id: string; name: string; address?: string | null };
 type StudyYear = {
@@ -23,17 +25,19 @@ export default function SchoolPage() {
   const [yearName, setYearName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const { busy, error, success, run } = useBusy();
+  const { busy, error, success, run, loading, loadData } = useBusy(true);
 
   async function load() {
-    const [schoolRow, yearRows] = await Promise.all([
-      api<School>("/school"),
-      api<StudyYear[]>("/study-years"),
-    ]);
-    setSchool(schoolRow);
-    setName(schoolRow.name);
-    setAddress(schoolRow.address ?? "");
-    setYears(yearRows);
+    await loadData(async () => {
+      const [schoolRow, yearRows] = await Promise.all([
+        api<School>("/school"),
+        api<StudyYear[]>("/study-years"),
+      ]);
+      setSchool(schoolRow);
+      setName(schoolRow.name);
+      setAddress(schoolRow.address ?? "");
+      setYears(yearRows);
+    }).catch(() => undefined);
   }
   useEffect(() => { load().catch(() => undefined); }, []);
 
@@ -75,7 +79,9 @@ export default function SchoolPage() {
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
-      <section className="official-card mb-6 rounded-xl p-5">
+      {loading ? <Loading label="در حال دریافت اطلاعات مدرسه..." /> : (
+      <>
+      <section className="official-card mb-6 rounded-md p-5">
         <h2 className="mb-4 font-bold text-navy">مشخصات مدرسه</h2>
         <FormGrid onSubmit={saveSchool}>
           <Input label="نام مدرسه" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -87,7 +93,7 @@ export default function SchoolPage() {
           </div>
         </FormGrid>
       </section>
-      <section className="official-card rounded-xl p-5">
+      <section className="official-card rounded-md p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-bold text-navy">سال‌های تحصیلی</h2>
@@ -95,33 +101,23 @@ export default function SchoolPage() {
           </div>
           <Button onClick={() => startYear()}>سال تحصیلی جدید</Button>
         </div>
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>نام</th>
-                <th>از تاریخ</th>
-                <th>تا تاریخ</th>
-                <th>تعداد کلاس</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {years.map((year) => (
-                <tr key={year.id}>
-                  <td>{year.name}</td>
-                  <td>{year.startDate}</td>
-                  <td>{year.endDate}</td>
-                  <td>{year._count?.classes ?? 0}</td>
-                  <td>
-                    <Button variant="ghost" onClick={() => startYear(year)}>ویرایش</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ResponsiveRecords
+          rows={years}
+          rowKey={(year) => year.id}
+          empty="سال تحصیلی تعریف نشده است."
+          columns={[
+            { id: "name", header: "نام", primary: true, cell: (year) => year.name },
+            { id: "start", header: "از تاریخ", cell: (year) => year.startDate },
+            { id: "end", header: "تا تاریخ", cell: (year) => year.endDate },
+            { id: "classes", header: "تعداد کلاس", cell: (year) => year._count?.classes ?? 0 },
+          ]}
+          actions={(year) => (
+            <Button variant="outline" onClick={() => startYear(year)}>ویرایش</Button>
+          )}
+        />
       </section>
+      </>
+      )}
       <Modal open={open} title={editing ? "ویرایش سال تحصیلی" : "ثبت سال تحصیلی"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={saveYear}>
           <Input label="نام سال تحصیلی" value={yearName} onChange={(e) => setYearName(e.target.value)} required placeholder="1405-1406" />
