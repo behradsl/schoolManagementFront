@@ -158,7 +158,14 @@ export default function CyclesPage() {
         name,
         dayCount: Number(dayCount),
         timeSlots: days.flatMap((day) =>
-          slotsForDay(day).map((slot, index) => ({ ...slot, cycleDay: day, order: index + 1 })),
+          slotsForDay(day).map((slot, index) => ({
+            ...(slot.id ? { id: slot.id } : {}),
+            name: slot.name,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            cycleDay: day,
+            order: index + 1,
+          })),
         ),
       };
       if (editing) await api(`/cycles/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });

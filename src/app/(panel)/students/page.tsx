@@ -91,13 +91,23 @@ export default function StudentsPage() {
     setOpen(true);
   }
 
+  function studentPayload() {
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...payload } = form as typeof form & {
+      id?: string;
+      createdAt?: string;
+      updatedAt?: string;
+    };
+    return payload;
+  }
+
   async function save(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
+      const payload = studentPayload();
       if (editing) {
-        await api(`/students/${editing.id}`, { method: "PATCH", body: JSON.stringify(form) });
+        await api(`/students/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       } else {
-        await api("/students", { method: "POST", body: JSON.stringify(form) });
+        await api("/students", { method: "POST", body: JSON.stringify(payload) });
       }
       setOpen(false);
       await load();

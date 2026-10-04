@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const vazir = Vazirmatn({
-  subsets: ["arabic", "latin"],
+const vazir = localFont({
+  src: [
+    { path: "../fonts/Vazirmatn-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../fonts/Vazirmatn-Medium.ttf", weight: "500", style: "normal" },
+    { path: "../fonts/Vazirmatn-Bold.ttf", weight: "700", style: "normal" },
+  ],
   variable: "--font-vazir",
   display: "swap",
 });
