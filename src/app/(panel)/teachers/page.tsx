@@ -112,6 +112,7 @@ export default function TeachersPage() {
       )}
       <Modal open={open} title={editing ? "ویرایش دبیر" : "ثبت دبیر"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
           <Input label="نام خانوادگی" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
           <Input label="کد پرسنلی" value={form.personnelNumber} onChange={(e) => setForm({ ...form, personnelNumber: e.target.value })} required />

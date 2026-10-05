@@ -72,6 +72,7 @@ export default function UsersPage() {
       )}
       <Modal open={open} title="تعریف کاربر" onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام کاربری" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
           <Input label="رمز عبور" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           <Select label="نقش" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as "ADMIN" | "TEACHER" })}>

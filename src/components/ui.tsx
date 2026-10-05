@@ -115,14 +115,33 @@ export function PageHeader({
   );
 }
 
-export function Alert({ message, type = "error" }: { message?: string; type?: "error" | "success" }) {
+export function Alert({
+  message,
+  type = "error",
+  inline = false,
+  className = "",
+}: {
+  message?: string;
+  type?: "error" | "success";
+  inline?: boolean;
+  className?: string;
+}) {
   if (!message) return null;
+  const floating = type === "error" && !inline;
   return (
     <div
       role="alert"
       className={cn(
-        "mb-3 rounded-md px-3 py-2 text-sm",
-        type === "error" ? "bg-danger/10 text-danger" : "bg-success/10 text-success",
+        "rounded-md px-3 py-2 text-sm",
+        type === "error"
+          ? "border border-danger/40 bg-paper font-medium text-danger"
+          : "mb-3 bg-success/10 text-success",
+        floating
+          ? "fixed top-[4.5rem] z-[90] start-4 end-4 shadow-lg lg:start-72"
+          : type === "error"
+            ? "mb-3 bg-danger/10"
+            : "",
+        className,
       )}
     >
       {message}

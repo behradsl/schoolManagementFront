@@ -119,6 +119,7 @@ export default function ClassesPage() {
       )}
       <Modal open={open} title={editing ? "ویرایش کلاس" : "ثبت کلاس"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام کلاس" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label="رشته" value={form.fieldOfStudy} onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })} required />
           <Input label="مقطع / سطح تحصیل" value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })} required />

@@ -131,6 +131,7 @@ export default function SchoolPage() {
       )}
       <Modal open={open} title={editing ? "ویرایش سال تحصیلی" : "ثبت سال تحصیلی"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={saveYear}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام سال تحصیلی" value={yearName} onChange={(e) => setYearName(e.target.value)} required placeholder="1405-1406" />
           <JalaliDatePicker label="تاریخ شروع" value={startDate} onChange={setStartDate} />
           <JalaliDatePicker label="تاریخ پایان" value={endDate} onChange={setEndDate} />

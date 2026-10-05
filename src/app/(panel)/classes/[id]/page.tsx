@@ -118,6 +118,7 @@ export default function ClassDetailPage() {
         )}
       />
       <Modal open={Boolean(windowStudent)} title="ویرایش بازه عضویت" onClose={() => setWindowStudent(null)}>
+        <Alert message={error} inline className="md:col-span-2" />
         <FormGrid onSubmit={(e) => {
           e.preventDefault();
           if (!windowStudent) return;

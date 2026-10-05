@@ -34,7 +34,7 @@ export default function CycleDetailPage() {
   const [endDate, setEndDate] = useState("");
   const [startCycleDay, setStartCycleDay] = useState(1);
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const { busy, error, success, run, loading, loadData } = useBusy(true);
+  const { busy, error, success, run, loadData } = useBusy(true);
   const meta = jalaliMeta(startDate);
 
   async function load() {
@@ -100,7 +100,7 @@ export default function CycleDetailPage() {
     }, "اختصاص سیکل حذف شد");
   }
 
-  if (loading || !cycle) return <Loading label="در حال دریافت سیکل..." />;
+  if (!cycle) return <Loading label="در حال دریافت سیکل..." />;
 
   return (
     <div>
@@ -137,6 +137,7 @@ export default function CycleDetailPage() {
         <h3 className="mb-4 font-bold text-navy">
           {editingAssignmentId ? "ویرایش بازه سیکل کلاس" : "اختصاص سیکل به کلاس"}
         </h3>
+        <Alert message={error} inline className="md:col-span-2" />
         <FormGrid onSubmit={assign}>
           <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)} required disabled={Boolean(editingAssignmentId)}>
             <option value="">انتخاب کلاس</option>

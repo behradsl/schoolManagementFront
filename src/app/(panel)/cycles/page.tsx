@@ -289,6 +289,7 @@ export default function CyclesPage() {
 
       <Modal open={open} title={editing ? "ویرایش سیکل" : "ثبت سیکل"} onClose={() => setOpen(false)} wide>
         <FormGrid onSubmit={save}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام سیکل" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input
             label="تعداد روز سیکل"
@@ -377,6 +378,7 @@ export default function CyclesPage() {
 
       <Modal open={holidayOpen} title={editingHoliday ? "ویرایش تعطیلی" : "ثبت تعطیلی"} onClose={() => setHolidayOpen(false)}>
         <FormGrid onSubmit={saveHoliday}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="عنوان" value={holidayTitle} onChange={(e) => setHolidayTitle(e.target.value)} required />
           <Select label="نوع" value={holidayType} onChange={(e) => setHolidayType(e.target.value as "HOLIDAY" | "CLOSURE")}>
             <option value="HOLIDAY">تعطیل رسمی (مثل نوروز)</option>

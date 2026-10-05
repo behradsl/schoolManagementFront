@@ -187,6 +187,7 @@ export default function StudentsPage() {
       )}
       <Modal open={open} title={editing ? "ویرایش دانش‌آموز" : "ثبت دانش‌آموز"} onClose={() => setOpen(false)}>
         <FormGrid onSubmit={save}>
+          <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
           <Input label="نام خانوادگی" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
           <Input label="کد ملی" value={form.nationalCode} onChange={(e) => setForm({ ...form, nationalCode: e.target.value })} required />
