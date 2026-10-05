@@ -20,7 +20,13 @@ type ClassCycle = {
     dayCount: number;
     timeSlots: TimeSlot[];
   };
-  lessons: Array<{ cycleDay: number; timeSlotId: string; courseName: string; teacherId: string }>;
+  lessons: Array<{
+    cycleDay: number;
+    timeSlotId: string;
+    courseName: string;
+    teacherId: string;
+    attendanceCount?: number;
+  }>;
 };
 
 export default function ClassCyclePage() {
@@ -49,6 +55,13 @@ export default function ClassCyclePage() {
   }, [params.id]);
 
   const days = useMemo(() => data ? Array.from({ length: data.cycle.dayCount }, (_, i) => i + 1) : [], [data]);
+  const lockedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const lesson of data?.lessons ?? []) {
+      if ((lesson.attendanceCount ?? 0) > 0) keys.add(`${lesson.cycleDay}:${lesson.timeSlotId}`);
+    }
+    return keys;
+  }, [data]);
 
   async function save() {
     if (!data) return;
@@ -100,19 +113,22 @@ export default function ClassCyclePage() {
                   {daySlots.map((slot) => {
                     const key = `${day}:${slot.id}`;
                     const cell = grid[key] || { courseName: "", teacherId: "" };
+                    const locked = lockedKeys.has(key);
                     return (
                       <div key={slot.id} className="lesson-cell rounded-md border border-line bg-cream/50 p-3">
                         <div className="text-sm font-bold text-navy">{slot.name}</div>
                         <div className="text-xs text-muted">{slot.startTime} تا {slot.endTime}</div>
                         <input
-                          className="rounded border border-line px-2 py-1.5"
+                          className="rounded border border-line px-2 py-1.5 disabled:bg-slate"
                           placeholder="نام درس"
                           value={cell.courseName}
+                          disabled={locked}
                           onChange={(e) => setGrid({ ...grid, [key]: { ...cell, courseName: e.target.value } })}
                         />
                         <select
-                          className="rounded border border-line px-2 py-1.5"
+                          className="rounded border border-line px-2 py-1.5 disabled:bg-slate"
                           value={cell.teacherId}
+                          disabled={locked}
                           onChange={(e) => setGrid({ ...grid, [key]: { ...cell, teacherId: e.target.value } })}
                         >
                           <option value="">دبیر</option>
@@ -120,6 +136,21 @@ export default function ClassCyclePage() {
                             <option key={t.id} value={t.id}>{fullName(t)}</option>
                           ))}
                         </select>
+                        {locked ? (
+                          <p className="text-xs text-muted">برای این درس حضور و غیاب ثبت شده و قابل تغییر یا حذف نیست.</p>
+                        ) : cell.courseName || cell.teacherId ? (
+                          <button
+                            type="button"
+                            className="text-xs text-red-700"
+                            onClick={() => setGrid((current) => {
+                              const next = { ...current };
+                              delete next[key];
+                              return next;
+                            })}
+                          >
+                            حذف درس
+                          </button>
+                        ) : null}
                       </div>
                     );
                   })}

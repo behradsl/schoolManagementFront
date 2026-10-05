@@ -60,10 +60,12 @@ export default function UsersPage() {
           { id: "teacher", header: "دبیر مرتبط", cell: (row) => row.teacher ? fullName(row.teacher) : "-" },
         ]}
         actions={(row) => (
-          <Button variant="danger" onClick={async () => {
+          <Button variant="danger" onClick={() => {
             if (!confirm("حذف کاربر؟")) return;
-            await api(`/users/${row.id}`, { method: "DELETE" });
-            await load();
+            run(async () => {
+              await api(`/users/${row.id}`, { method: "DELETE" });
+              await load();
+            }).catch(() => undefined);
           }}>حذف</Button>
         )}
       />

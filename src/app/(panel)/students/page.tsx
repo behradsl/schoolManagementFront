@@ -171,10 +171,12 @@ export default function StudentsPage() {
             <Button variant="outline" onClick={() => openEdit(row)}>ویرایش</Button>
             <Button
               variant="danger"
-              onClick={async () => {
+              onClick={() => {
                 if (!confirm("حذف این دانش‌آموز؟")) return;
-                await api(`/students/${row.id}`, { method: "DELETE" });
-                await load();
+                run(async () => {
+                  await api(`/students/${row.id}`, { method: "DELETE" });
+                  await load();
+                }).catch(() => undefined);
               }}
             >
               حذف

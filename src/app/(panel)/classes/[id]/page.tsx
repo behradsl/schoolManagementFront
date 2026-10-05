@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, downloadFile, uploadFile } from "@/lib/api";
-import { Alert, Button, FileButton, Loading, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, FileButton, FormGrid, Loading, Modal, PageHeader, Select, useBusy } from "@/components/ui";
+import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { ResponsiveRecords } from "@/components/responsive-records";
 import { fullName } from "@/lib/format";
 
@@ -24,6 +25,9 @@ export default function ClassDetailPage() {
   const [data, setData] = useState<ClassDetail | null>(null);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [studentId, setStudentId] = useState("");
+  const [windowStudent, setWindowStudent] = useState<(Student & { enrollmentStart?: string | null; enrollmentEnd?: string | null }) | null>(null);
+  const [enrollStart, setEnrollStart] = useState("");
+  const [enrollEnd, setEnrollEnd] = useState("");
   const { error, success, run, setSuccess } = useBusy();
 
   async function load() {
@@ -73,11 +77,13 @@ export default function ClassDetailPage() {
           </Select>
         </div>
         <Button
-          onClick={async () => {
+          onClick={() => {
             if (!studentId) return;
-            await api(`/classes/${data.id}/students`, { method: "POST", body: JSON.stringify({ studentId }) });
-            setStudentId("");
-            await load();
+            run(async () => {
+              await api(`/classes/${data.id}/students`, { method: "POST", body: JSON.stringify({ studentId }) });
+              setStudentId("");
+              await load();
+            }).catch(() => undefined);
           }}
         >
           افزودن به کلاس
@@ -95,12 +101,47 @@ export default function ClassDetailPage() {
           { id: "window", header: "بازه عضویت", cell: (s) => `${s.enrollmentStart} تا ${s.enrollmentEnd}` },
         ]}
         actions={(s) => (
-          <Button variant="danger" onClick={async () => {
-            await api(`/classes/${data.id}/students/${s.id}`, { method: "DELETE" });
-            await load();
-          }}>حذف از کلاس</Button>
+          <>
+            <Button variant="outline" onClick={() => {
+              setWindowStudent(s);
+              setEnrollStart(s.enrollmentStart ?? data.studyYear?.startDate ?? "");
+              setEnrollEnd(s.enrollmentEnd ?? data.studyYear?.endDate ?? "");
+            }}>ویرایش بازه</Button>
+            <Button variant="danger" onClick={() => {
+              if (!confirm("حذف عضویت این دانش‌آموز از کلاس؟")) return;
+              run(async () => {
+                await api(`/classes/${data.id}/students/${s.id}`, { method: "DELETE" });
+                await load();
+              }).catch(() => undefined);
+            }}>حذف از کلاس</Button>
+          </>
         )}
       />
+      <Modal open={Boolean(windowStudent)} title="ویرایش بازه عضویت" onClose={() => setWindowStudent(null)}>
+        <FormGrid onSubmit={(e) => {
+          e.preventDefault();
+          if (!windowStudent) return;
+          run(async () => {
+            await api(`/classes/${data.id}/students`, {
+              method: "POST",
+              body: JSON.stringify({
+                studentId: windowStudent.id,
+                startDate: enrollStart,
+                endDate: enrollEnd,
+              }),
+            });
+            setWindowStudent(null);
+            await load();
+          }, "بازه عضویت ذخیره شد").catch(() => undefined);
+        }}>
+          <JalaliDatePicker label="تاریخ شروع" value={enrollStart} onChange={setEnrollStart} />
+          <JalaliDatePicker label="تاریخ پایان" value={enrollEnd} onChange={setEnrollEnd} />
+          <div className="md:col-span-2 flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setWindowStudent(null)}>انصراف</Button>
+            <Button>ذخیره</Button>
+          </div>
+        </FormGrid>
+      </Modal>
     </div>
   );
 }

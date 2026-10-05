@@ -60,6 +60,14 @@ export default function SchoolPage() {
     setOpen(true);
   }
 
+  async function removeYear(id: string) {
+    if (!confirm("حذف این سال تحصیلی؟")) return;
+    await run(async () => {
+      await api(`/study-years/${id}`, { method: "DELETE" });
+      await load();
+    }, "سال تحصیلی حذف شد");
+  }
+
   async function saveYear(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
@@ -112,7 +120,10 @@ export default function SchoolPage() {
             { id: "classes", header: "تعداد کلاس", cell: (year) => year._count?.classes ?? 0 },
           ]}
           actions={(year) => (
-            <Button variant="outline" onClick={() => startYear(year)}>ویرایش</Button>
+            <>
+              <Button variant="outline" onClick={() => startYear(year)}>ویرایش</Button>
+              <Button variant="danger" onClick={() => removeYear(year.id)}>حذف</Button>
+            </>
           )}
         />
       </section>

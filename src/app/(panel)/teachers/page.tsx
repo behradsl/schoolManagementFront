@@ -99,10 +99,12 @@ export default function TeachersPage() {
               });
               setOpen(true);
             }}>ویرایش</Button>
-            <Button variant="danger" onClick={async () => {
+            <Button variant="danger" onClick={() => {
               if (!confirm("حذف این دبیر؟")) return;
-              await api(`/teachers/${row.id}`, { method: "DELETE" });
-              await load();
+              run(async () => {
+                await api(`/teachers/${row.id}`, { method: "DELETE" });
+                await load();
+              }).catch(() => undefined);
             }}>حذف</Button>
           </>
         )}

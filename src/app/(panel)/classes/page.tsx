@@ -48,6 +48,14 @@ export default function ClassesPage() {
     [rows, yearId],
   );
 
+  async function removeClass(id: string) {
+    if (!confirm("حذف این کلاس؟")) return;
+    await run(async () => {
+      await api(`/classes/${id}`, { method: "DELETE" });
+      await load();
+    });
+  }
+
   async function save(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
@@ -104,6 +112,7 @@ export default function ClassesPage() {
                 });
                 setOpen(true);
               }}>ویرایش</Button>
+              <Button variant="danger" onClick={() => removeClass(row.id)}>حذف</Button>
             </>
           )}
         />

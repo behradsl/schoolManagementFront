@@ -208,6 +208,14 @@ export default function CyclesPage() {
     }, "تعطیلی ذخیره شد");
   }
 
+  async function removeCycle(id: string) {
+    if (!confirm("حذف این سیکل؟")) return;
+    await run(async () => {
+      await api(`/cycles/${id}`, { method: "DELETE" });
+      await load();
+    }, "سیکل حذف شد");
+  }
+
   async function removeHoliday(id: string) {
     await run(async () => {
       await api(`/calendar-exceptions/${id}`, { method: "DELETE" });
@@ -269,6 +277,7 @@ export default function CyclesPage() {
                   <Link href={`/cycles/${row.id}`}>جزئیات و اختصاص به کلاس</Link>
                 </Button>
                 <Button variant="outline" onClick={() => startEdit(row)}>ویرایش</Button>
+                <Button variant="danger" onClick={() => removeCycle(row.id)}>حذف</Button>
               </div>
             </div>
             <p className="mt-3 text-xs leading-6 text-navy">{summarizeSlots(row)}</p>

@@ -33,7 +33,8 @@ export default function CycleDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startCycleDay, setStartCycleDay] = useState(1);
-  const { busy, error, run, loading, loadData } = useBusy(true);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const { busy, error, success, run, loading, loadData } = useBusy(true);
   const meta = jalaliMeta(startDate);
 
   async function load() {
@@ -44,22 +45,59 @@ export default function CycleDetailPage() {
   }
   useEffect(() => { load().catch(() => undefined); }, [params.id]);
 
+  function resetAssignForm() {
+    setEditingAssignmentId(null);
+    setClassId("");
+    setStartDate("");
+    setEndDate("");
+    setStartCycleDay(1);
+  }
+
+  function startEditAssignment(item: CycleDetail["classCycles"][number]) {
+    setEditingAssignmentId(item.id);
+    setClassId(item.class.id);
+    setStartDate(item.startDate);
+    setEndDate(item.endDate);
+    setStartCycleDay(item.startCycleDay);
+  }
+
   async function assign(e: FormEvent) {
     e.preventDefault();
+    const editing = editingAssignmentId;
     await run(async () => {
-      await api("/class-cycles", {
-        method: "POST",
-        body: JSON.stringify({
-          cycleId: params.id,
-          classId,
-          startDate,
-          endDate,
-          startCycleDay: Number(startCycleDay),
-        }),
-      });
-      setClassId("");
+      if (editing) {
+        await api(`/class-cycles/${editing}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            startDate,
+            endDate,
+            startCycleDay: Number(startCycleDay),
+          }),
+        });
+      } else {
+        await api("/class-cycles", {
+          method: "POST",
+          body: JSON.stringify({
+            cycleId: params.id,
+            classId,
+            startDate,
+            endDate,
+            startCycleDay: Number(startCycleDay),
+          }),
+        });
+      }
+      resetAssignForm();
       await load();
-    });
+    }, editing ? "بازه سیکل ویرایش شد" : "سیکل به کلاس اختصاص داده شد");
+  }
+
+  async function removeAssignment(id: string) {
+    if (!confirm("حذف اختصاص این سیکل به کلاس؟")) return;
+    await run(async () => {
+      await api(`/class-cycles/${id}`, { method: "DELETE" });
+      if (editingAssignmentId === id) resetAssignForm();
+      await load();
+    }, "اختصاص سیکل حذف شد");
   }
 
   if (loading || !cycle) return <Loading label="در حال دریافت سیکل..." />;
@@ -72,6 +110,7 @@ export default function CycleDetailPage() {
         actions={<Button asChild variant="outline"><Link href="/cycles">بازگشت</Link></Button>}
       />
       <Alert message={error} />
+      <Alert message={success} type="success" />
       <div className="official-card mb-6 rounded-md p-5">
         <h3 className="mb-3 font-bold text-navy">ساعات هر روز سیکل</h3>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,9 +134,11 @@ export default function CycleDetailPage() {
         </div>
       </div>
       <div className="official-card mb-6 rounded-md p-5">
-        <h3 className="mb-4 font-bold text-navy">اختصاص سیکل به کلاس</h3>
+        <h3 className="mb-4 font-bold text-navy">
+          {editingAssignmentId ? "ویرایش بازه سیکل کلاس" : "اختصاص سیکل به کلاس"}
+        </h3>
         <FormGrid onSubmit={assign}>
-          <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)} required>
+          <Select label="کلاس" value={classId} onChange={(e) => setClassId(e.target.value)} required disabled={Boolean(editingAssignmentId)}>
             <option value="">انتخاب کلاس</option>
             {classes.map((c) => (
               <option key={c.id} value={c.id}>{c.name} — {c.studyYear?.name ?? c.studyingYearName}</option>
@@ -120,8 +161,11 @@ export default function CycleDetailPage() {
               روز {startCycleDay} سیکل با این تاریخ متناظر خواهد بود.
             </div>
           )}
-          <div className="md:col-span-2">
-            <Button disabled={busy}>ثبت بازه سیکل برای کلاس</Button>
+          <div className="md:col-span-2 flex justify-end gap-2">
+            {editingAssignmentId && (
+              <Button type="button" variant="ghost" onClick={resetAssignForm}>انصراف</Button>
+            )}
+            <Button disabled={busy}>{editingAssignmentId ? "ذخیره بازه" : "ثبت بازه سیکل برای کلاس"}</Button>
           </div>
         </FormGrid>
       </div>
@@ -135,9 +179,13 @@ export default function CycleDetailPage() {
                 {item.startDateInfo ? ` (سال ${item.startDateInfo.yearLength} روزه)` : ""}
               </div>
             </div>
-            <Button asChild>
-              <Link href={`/class-cycles/${item.id}`}>تعیین دروس و دبیران</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => startEditAssignment(item)}>ویرایش بازه</Button>
+              <Button variant="danger" onClick={() => removeAssignment(item.id)}>حذف</Button>
+              <Button asChild>
+                <Link href={`/class-cycles/${item.id}`}>تعیین دروس و دبیران</Link>
+              </Button>
+            </div>
           </div>
         ))}
       </div>
