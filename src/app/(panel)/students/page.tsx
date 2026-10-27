@@ -156,6 +156,7 @@ export default function StudentsPage() {
         <Loading label="در حال دریافت دانش‌آموزان..." />
       ) : (
       <ResponsiveRecords
+        searchable={false}
         rows={rows}
         rowKey={(row) => row.id}
         columns={[

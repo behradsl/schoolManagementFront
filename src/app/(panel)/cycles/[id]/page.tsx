@@ -1,10 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { Alert, Button, FormGrid, Input, Loading, PageHeader, Select, useBusy } from "@/components/ui";
+import { includesQuery } from "@/lib/search";
+import { Pager, usePagedItems } from "@/components/pager";
 import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { jalaliMeta } from "@/lib/format";
 
@@ -34,6 +36,7 @@ export default function CycleDetailPage() {
   const [endDate, setEndDate] = useState("");
   const [startCycleDay, setStartCycleDay] = useState(1);
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [assignmentQuery, setAssignmentQuery] = useState("");
   const { busy, error, success, run, loadData } = useBusy(true);
   const meta = jalaliMeta(startDate);
 
@@ -99,6 +102,19 @@ export default function CycleDetailPage() {
       await load();
     }, "اختصاص سیکل حذف شد");
   }
+
+  const filteredAssignments = useMemo(
+    () => (cycle?.classCycles ?? []).filter((item) => includesQuery(
+      assignmentQuery,
+      item.class.name,
+      item.class.studyYear?.name,
+      item.startDate,
+      item.endDate,
+      String(item.startCycleDay),
+    )),
+    [cycle, assignmentQuery],
+  );
+  const assignments = usePagedItems(filteredAssignments, assignmentQuery);
 
   if (!cycle) return <Loading label="در حال دریافت سیکل..." />;
 
@@ -170,8 +186,13 @@ export default function CycleDetailPage() {
           </div>
         </FormGrid>
       </div>
+      {cycle.classCycles.length > 0 && (
+        <div className="mb-3 max-w-sm">
+          <Input placeholder="جستجو در اختصاص‌ها" value={assignmentQuery} onChange={(e) => setAssignmentQuery(e.target.value)} aria-label="جستجو در اختصاص‌ها" />
+        </div>
+      )}
       <div className="space-y-3">
-        {cycle.classCycles.map((item) => (
+        {assignments.items.map((item) => (
           <div key={item.id} className="official-card flex flex-col gap-3 rounded-md p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="font-bold text-navy">{item.class.name}{item.class.studyYear?.name ? ` — ${item.class.studyYear.name}` : ""}</div>
@@ -190,6 +211,7 @@ export default function CycleDetailPage() {
           </div>
         ))}
       </div>
+      <Pager page={assignments.page} pageCount={assignments.pageCount} from={assignments.from} to={assignments.to} total={assignments.total} onPage={assignments.setPage} />
     </div>
   );
 }

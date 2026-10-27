@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, useState } from "react";
+import { Children, FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, isValidElement, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { includesQuery } from "@/lib/search";
 import { Button } from "@/components/button";
 
 export { Button } from "@/components/button";
@@ -64,20 +66,159 @@ export function Textarea(
   );
 }
 
+function optionLabel(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(optionLabel).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) return optionLabel(node.props.children);
+  return "";
+}
+
 export function Select({
   label,
   children,
   className = "",
   id,
-  ...rest
+  value,
+  onChange,
+  required,
+  disabled,
+  name,
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
+  const generatedId = useId();
+  const fieldId = id || generatedId;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [menuStyle, setMenuStyle] = useState<{ top: number; left: number; width: number; maxHeight: number; flip: boolean } | null>(null);
+  const options = Children.toArray(children).flatMap((child) => {
+    if (!isValidElement<{ value?: string | number; children?: ReactNode }>(child) || child.type !== "option") return [];
+    return [{ value: String(child.props.value ?? ""), label: optionLabel(child.props.children) }];
+  });
+  const selected = options.find((option) => option.value === String(value ?? ""));
+  const visible = options.filter((option) => includesQuery(query, option.label));
+
+  function placeMenu() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const flip = spaceBelow < 220 && spaceAbove > spaceBelow;
+    setMenuStyle({
+      top: flip ? rect.top - 4 : rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.max(160, Math.min(320, flip ? spaceAbove : spaceBelow)),
+      flip,
+    });
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    placeMenu();
+    function onPointer(event: MouseEvent) {
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("mousedown", onPointer);
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onPointer);
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function choose(next: string) {
+    onChange?.({ target: { value: next }, currentTarget: { value: next } } as React.ChangeEvent<HTMLSelectElement>);
+    setOpen(false);
+    setQuery("");
+  }
+
   return (
-    <label className="block text-sm" htmlFor={id}>
-      {label && <span className="mb-1.5 block text-muted">{label}</span>}
-      <select id={id} className={cn(fieldClass, className)} {...rest}>
-        {children}
-      </select>
-    </label>
+    <div ref={rootRef} className="block text-sm">
+      {label && <span className="mb-1.5 block text-muted" id={`${fieldId}-label`}>{label}</span>}
+      <input
+        className="sr-only"
+        tabIndex={-1}
+        name={name}
+        value={String(value ?? "")}
+        required={required}
+        disabled={disabled}
+        onChange={() => undefined}
+      />
+      <button
+        ref={buttonRef}
+        id={fieldId}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-labelledby={label ? `${fieldId}-label` : undefined}
+        className={cn(fieldClass, "flex items-center justify-between text-start disabled:bg-slate", className)}
+        onClick={() => {
+          if (disabled) return;
+          setQuery("");
+          setOpen((current) => !current);
+        }}
+      >
+        <span className={selected ? "text-ink" : "text-muted"}>{selected?.label || "انتخاب کنید"}</span>
+        <span aria-hidden="true" className="text-muted">▾</span>
+      </button>
+      {open && menuStyle && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[110] overflow-hidden rounded-md border border-line bg-paper shadow-lg"
+          style={{
+            top: menuStyle.top,
+            left: menuStyle.left,
+            width: menuStyle.width,
+            maxHeight: menuStyle.maxHeight,
+            transform: menuStyle.flip ? "translateY(-100%)" : undefined,
+          }}
+        >
+          <div className="border-b border-line p-2">
+            <input
+              autoFocus
+              className={fieldClass}
+              placeholder="جستجو"
+              aria-label="جستجو در گزینه‌ها"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div role="listbox" className="max-h-60 overflow-y-auto p-1">
+            {visible.length === 0 ? (
+              <p className="px-2 py-3 text-sm text-muted">موردی یافت نشد</p>
+            ) : visible.map((option) => (
+              <button
+                key={`${option.value}:${option.label}`}
+                type="button"
+                role="option"
+                aria-selected={option.value === String(value ?? "")}
+                className={cn(
+                  "block w-full rounded-md px-2 py-2 text-start text-sm hover:bg-cream",
+                  option.value === String(value ?? "") && "bg-cream font-bold text-navy",
+                )}
+                onClick={() => choose(option.value)}
+              >
+                {option.label || "—"}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
   );
 }
 

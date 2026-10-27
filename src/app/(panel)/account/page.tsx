@@ -6,6 +6,7 @@ import { Alert, Button, FormGrid, Input, Loading, PageHeader, PasswordInput, use
 
 export default function AccountPage() {
   const [username, setUsername] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const { busy, error, success, run, loading, loadData } = useBusy(true);
@@ -20,14 +21,23 @@ export default function AccountPage() {
   async function save(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
+      if ((password || passwordConfirm) && !currentPassword) {
+        throw new Error("برای تغییر رمز، رمز فعلی را وارد کنید");
+      }
       if ((password || passwordConfirm) && password !== passwordConfirm) {
         throw new Error("تکرار رمز عبور با رمز عبور یکسان نیست");
       }
       if (password && password.length < 6) {
         throw new Error("رمز عبور باید حداقل ۶ نویسه باشد");
       }
-      const body: { username: string; password?: string; passwordConfirm?: string } = { username };
+      const body: {
+        username: string;
+        currentPassword?: string;
+        password?: string;
+        passwordConfirm?: string;
+      } = { username };
       if (password) {
+        body.currentPassword = currentPassword;
         body.password = password;
         body.passwordConfirm = passwordConfirm;
       }
@@ -36,6 +46,7 @@ export default function AccountPage() {
         body: JSON.stringify(body),
       });
       setSession(updated);
+      setCurrentPassword("");
       setPassword("");
       setPasswordConfirm("");
     }, "حساب کاربری ذخیره شد");
@@ -47,7 +58,7 @@ export default function AccountPage() {
     <div>
       <PageHeader
         title="حساب کاربری"
-        subtitle="نام کاربری و رمز عبور خود را از اینجا تغییر دهید. اگر رمز را خالی بگذارید، رمز فعلی باقی می‌ماند."
+        subtitle="نام کاربری را می‌توانید بدون رمز عوض کنید. برای رمز جدید، ابتدا رمز فعلی را وارد کنید."
       />
       <Alert message={error} />
       <Alert message={success} type="success" />
@@ -60,6 +71,12 @@ export default function AccountPage() {
             onChange={(e) => setUsername(e.target.value)}
             required
             autoComplete="username"
+          />
+          <PasswordInput
+            label="رمز فعلی"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
           />
           <PasswordInput
             label="رمز عبور جدید"

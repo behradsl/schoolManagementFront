@@ -1,7 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
+import { isValidElement, ReactNode, useEffect, useMemo, useState } from "react";
+import { Input } from "@/components/ui";
+import { Pager, pageSlice } from "@/components/pager";
 import { cn } from "@/lib/cn";
+import { includesQuery } from "@/lib/search";
 
 export type RecordColumn<T> = {
   id: string;
@@ -10,6 +13,14 @@ export type RecordColumn<T> = {
   primary?: boolean;
 };
 
+function cellText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(cellText).join(" ");
+  if (isValidElement<{ children?: ReactNode }>(node)) return cellText(node.props.children);
+  return "";
+}
+
 export function ResponsiveRecords<T>({
   rows,
   columns,
@@ -17,6 +28,7 @@ export function ResponsiveRecords<T>({
   actions,
   empty = "موردی یافت نشد.",
   className,
+  searchable = true,
 }: {
   rows: T[];
   columns: RecordColumn<T>[];
@@ -24,7 +36,19 @@ export function ResponsiveRecords<T>({
   actions?: (row: T) => ReactNode;
   empty?: string;
   className?: string;
+  searchable?: boolean;
 }) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const visible = useMemo(() => {
+    if (!searchable || !query.trim()) return rows;
+    return rows.filter((row) => includesQuery(query, ...columns.map((column) => cellText(column.cell(row)))));
+  }, [rows, columns, query, searchable]);
+  const paged = pageSlice(visible, page);
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
   if (!rows.length) {
     return (
       <div className={cn("official-card rounded-md", className)}>
@@ -35,8 +59,19 @@ export function ResponsiveRecords<T>({
 
   return (
     <div className={className}>
+      {searchable && (
+        <div className="mb-3 max-w-sm">
+          <Input placeholder="جستجو در فهرست" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="جستجو در فهرست" />
+        </div>
+      )}
+      {visible.length === 0 ? (
+        <div className="official-card rounded-md">
+          <div className="px-4 py-10 text-center text-muted">موردی با این جستجو یافت نشد.</div>
+        </div>
+      ) : (
+      <>
       <div className="space-y-3 md:hidden">
-        {rows.map((row) => {
+        {paged.items.map((row) => {
           const title = columns.find((column) => column.primary) ?? columns[0];
           const rest = columns.filter((column) => column !== title);
           return (
@@ -67,7 +102,7 @@ export function ResponsiveRecords<T>({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {paged.items.map((row) => (
                 <tr key={rowKey(row)}>
                   {columns.map((column) => (
                     <td key={column.id}>{column.cell(row)}</td>
@@ -79,6 +114,9 @@ export function ResponsiveRecords<T>({
           </table>
         </div>
       </div>
+      <Pager page={paged.page} pageCount={paged.pageCount} from={paged.from} to={paged.to} total={paged.total} onPage={setPage} />
+      </>
+      )}
     </div>
   );
 }
