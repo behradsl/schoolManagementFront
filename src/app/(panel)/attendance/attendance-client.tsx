@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { Alert, Button, Loading, Modal, PageHeader, Select, Textarea, statusButtonClass, useBusy } from "@/components/ui";
+import { Alert, Button, Input, Loading, Modal, PageHeader, Select, Textarea, statusButtonClass, useBusy } from "@/components/ui";
+import { includesQuery } from "@/lib/search";
+import { Pager, usePagedItems } from "@/components/pager";
 import { cn } from "@/lib/cn";
 import { JUST_LABEL, STATUS_LABEL, fullName } from "@/lib/format";
 
@@ -33,6 +35,7 @@ export default function AttendanceClient() {
   const [records, setRecords] = useState<Record<string, { status: Status; justificationType?: string; justificationNote?: string }>>({});
   const [justFor, setJustFor] = useState<string | null>(null);
   const [notifySms, setNotifySms] = useState(false);
+  const [studentQuery, setStudentQuery] = useState("");
   const { busy, error, success, run } = useBusy();
 
   useEffect(() => {
@@ -76,6 +79,12 @@ export default function AttendanceClient() {
     }), "حضور و غیاب ذخیره شد");
   }
 
+  const filteredStudents = useMemo(
+    () => (session?.students ?? []).filter((row) => includesQuery(studentQuery, fullName(row.student), row.student.nationalCode)),
+    [session, studentQuery],
+  );
+  const students = usePagedItems(filteredStudents, studentQuery);
+
   if (!session) return <Loading label="در حال دریافت فهرست دانش‌آموزان..." />;
 
   return (
@@ -102,8 +111,13 @@ export default function AttendanceClient() {
           اطلاع‌رسانی پیامکی غیبت غیرموجه به والدین
         </label>
       </div>
+      {session.students.length > 0 && (
+        <div className="mb-3 max-w-sm">
+          <Input placeholder="جستجو در دانش‌آموزان" value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} aria-label="جستجو در دانش‌آموزان" />
+        </div>
+      )}
       <div className="space-y-3 md:hidden">
-        {session.students.map((row) => {
+        {students.items.map((row) => {
           const rec = records[row.student.id];
           return (
             <div key={row.student.id} className="official-card rounded-md p-4">
@@ -145,7 +159,7 @@ export default function AttendanceClient() {
             </tr>
           </thead>
           <tbody>
-            {session.students.map((row) => {
+            {students.items.map((row) => {
               const rec = records[row.student.id];
               return (
                 <tr key={row.student.id}>
@@ -182,6 +196,7 @@ export default function AttendanceClient() {
           </tbody>
         </table>
       </div>
+      <Pager page={students.page} pageCount={students.pageCount} from={students.from} to={students.to} total={students.total} onPage={students.setPage} />
       <Modal open={!!justFor} title="توجیه غیبت / تأخیر / تعجیل" onClose={() => setJustFor(null)}>
         {justFor && (
           <div className="space-y-3">

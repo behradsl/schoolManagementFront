@@ -17,6 +17,8 @@ import {
 } from "@/components/ui";
 import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { EXCEPTION_LABEL } from "@/lib/format";
+import { includesQuery } from "@/lib/search";
+import { Pager, usePagedItems } from "@/components/pager";
 
 type TimeSlot = {
   id?: string;
@@ -71,6 +73,8 @@ function summarizeSlots(cycle: Cycle) {
 export default function CyclesPage() {
   const [rows, setRows] = useState<Cycle[]>([]);
   const [exceptions, setExceptions] = useState<CalendarException[]>([]);
+  const [holidayQuery, setHolidayQuery] = useState("");
+  const [cycleQuery, setCycleQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [holidayOpen, setHolidayOpen] = useState(false);
   const [editing, setEditing] = useState<Cycle | null>(null);
@@ -85,6 +89,16 @@ export default function CyclesPage() {
   const [holidayNote, setHolidayNote] = useState("");
   const { busy, error, success, run, loading, loadData } = useBusy(true);
   const days = useMemo(() => Array.from({ length: Number(dayCount) || 1 }, (_, i) => i + 1), [dayCount]);
+  const filteredHolidays = useMemo(
+    () => exceptions.filter((item) => includesQuery(holidayQuery, item.title, EXCEPTION_LABEL[item.type], item.startDate, item.endDate, item.note)),
+    [exceptions, holidayQuery],
+  );
+  const holidays = usePagedItems(filteredHolidays, holidayQuery);
+  const filteredCycles = useMemo(
+    () => rows.filter((row) => includesQuery(cycleQuery, row.name, String(row.dayCount), summarizeSlots(row))),
+    [rows, cycleQuery],
+  );
+  const cyclePages = usePagedItems(filteredCycles, cycleQuery);
 
   async function load() {
     await loadData(async () => {
@@ -242,11 +256,16 @@ export default function CyclesPage() {
           </div>
           <Button variant="outline" onClick={() => startHoliday()}>ثبت تعطیلی</Button>
         </div>
+        {exceptions.length > 0 && (
+          <div className="mb-3 max-w-sm">
+            <Input placeholder="جستجو در تعطیلات" value={holidayQuery} onChange={(e) => setHolidayQuery(e.target.value)} aria-label="جستجو در تعطیلات" />
+          </div>
+        )}
         {exceptions.length === 0 && (
           <p className="text-sm text-muted">هنوز تعطیلی ثبت نشده است.</p>
         )}
         <div className="grid gap-3">
-          {exceptions.map((item) => (
+          {holidays.items.map((item) => (
             <div key={item.id} className="flex flex-col gap-3 rounded-md border border-line bg-cream/60 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="font-bold text-navy">{item.title}</div>
@@ -262,10 +281,16 @@ export default function CyclesPage() {
             </div>
           ))}
         </div>
+        <Pager page={holidays.page} pageCount={holidays.pageCount} from={holidays.from} to={holidays.to} total={holidays.total} onPage={holidays.setPage} />
       </section>
 
+      {rows.length > 0 && (
+        <div className="mb-3 max-w-sm">
+          <Input placeholder="جستجو در سیکل‌ها" value={cycleQuery} onChange={(e) => setCycleQuery(e.target.value)} aria-label="جستجو در سیکل‌ها" />
+        </div>
+      )}
       <div className="grid gap-4">
-        {rows.map((row) => (
+        {cyclePages.items.map((row) => (
           <div key={row.id} className="official-card rounded-md p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -284,6 +309,7 @@ export default function CyclesPage() {
           </div>
         ))}
       </div>
+      <Pager page={cyclePages.page} pageCount={cyclePages.pageCount} from={cyclePages.from} to={cyclePages.to} total={cyclePages.total} onPage={cyclePages.setPage} />
       </>
       )}
 

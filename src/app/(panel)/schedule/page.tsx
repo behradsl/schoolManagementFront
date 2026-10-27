@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, getStoredUser } from "@/lib/api";
-import { PageHeader, Select, Button, Loading } from "@/components/ui";
+import { Input, PageHeader, Select, Button, Loading } from "@/components/ui";
+import { includesQuery } from "@/lib/search";
+import { Pager, usePagedItems } from "@/components/pager";
 import { JalaliDatePicker } from "@/components/jalali-date-picker";
 import { EXCEPTION_LABEL, fullName, todayJalali } from "@/lib/format";
 import { setNavPending } from "@/lib/nav-progress";
@@ -27,6 +29,7 @@ type ScheduleResponse = {
 export default function SchedulePage() {
   const router = useRouter();
   const [role, setRole] = useState<"ADMIN" | "TEACHER" | null>(null);
+  const [sessionQuery, setSessionQuery] = useState("");
   const [date, setDate] = useState("");
   const [classId, setClassId] = useState("");
   const [teacherId, setTeacherId] = useState("");
@@ -62,6 +65,20 @@ export default function SchedulePage() {
     if (!date) return;
     load().catch(() => undefined);
   }, [date, classId, teacherId, role]);
+
+  const filteredSessions = useMemo(
+    () => (data?.sessions ?? []).filter((session) => includesQuery(
+      sessionQuery,
+      session.courseName,
+      session.class.name,
+      session.timeSlot.name,
+      session.timeSlot.startTime,
+      session.timeSlot.endTime,
+      fullName(session.teacher),
+    )),
+    [data, sessionQuery],
+  );
+  const sessions = usePagedItems(filteredSessions, `${date}:${sessionQuery}`);
 
   return (
     <div>
@@ -107,7 +124,12 @@ export default function SchedulePage() {
           {!data?.closed && data?.sessions.length === 0 && (
             <div className="official-card rounded-md p-8 text-center text-muted">برای این تاریخ ساعت آموزشی ثبت نشده است.</div>
           )}
-          {data?.sessions.map((session) => (
+          {(data?.sessions.length ?? 0) > 0 && (
+            <div className="max-w-sm">
+              <Input placeholder="جستجو در جلسات" value={sessionQuery} onChange={(e) => setSessionQuery(e.target.value)} aria-label="جستجو در جلسات" />
+            </div>
+          )}
+          {sessions.items.map((session) => (
             <article key={session.lessonId} className="official-card flex flex-col gap-4 rounded-md p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-lg font-bold text-navy">{session.courseName}</div>
@@ -130,6 +152,7 @@ export default function SchedulePage() {
               </Button>
             </article>
           ))}
+          <Pager page={sessions.page} pageCount={sessions.pageCount} from={sessions.from} to={sessions.to} total={sessions.total} onPage={sessions.setPage} />
         </div>
       )}
     </div>
