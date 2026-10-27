@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   GraduationCap,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,7 +17,7 @@ import {
   Users,
   UserSquare2,
 } from "lucide-react";
-import { AuthUser, api, clearSession, setSession } from "@/lib/api";
+import { AuthUser, api, clearSession, getStoredUser, setSession } from "@/lib/api";
 import { Button } from "@/components/button";
 import { Loading } from "@/components/loading";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/sheet";
@@ -35,6 +36,7 @@ const ALL_ITEMS = [
   { href: "/schedule", label: "برنامه و حضور", icon: ClipboardCheck, roles: ["ADMIN", "TEACHER"] },
   { href: "/reports", label: "گزارش‌ها", icon: BookOpen, roles: ["ADMIN", "TEACHER"] },
   { href: "/users", label: "کاربران", icon: Users, roles: ["ADMIN"] },
+  { href: "/account", label: "حساب کاربری", icon: KeyRound, roles: ["ADMIN", "TEACHER"] },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -114,6 +116,15 @@ export function Shell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  useEffect(() => {
+    function syncSession() {
+      const stored = getStoredUser();
+      if (stored) setUser(stored);
+    }
+    window.addEventListener("school-session", syncSession);
+    return () => window.removeEventListener("school-session", syncSession);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

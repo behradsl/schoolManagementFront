@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setSession, AuthUser } from "@/lib/api";
-import { Alert, Button, Input } from "@/components/ui";
+import { Alert, Button, Input, PasswordInput } from "@/components/ui";
 import { Loading } from "@/components/loading";
 import { setNavPending } from "@/lib/nav-progress";
 
@@ -54,9 +54,8 @@ export default function LoginPage() {
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
           <Input label="نام کاربری" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} />
-          <Input
+          <PasswordInput
             label="رمز عبور"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -21,6 +21,9 @@ export function getStoredUser(): AuthUser | null {
 
 export function setSession(user: AuthUser) {
   sessionStorage.setItem("user", JSON.stringify(user));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("school-session"));
+  }
 }
 
 export function clearSession() {

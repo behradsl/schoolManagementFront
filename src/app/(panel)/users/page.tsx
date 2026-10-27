@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Alert, Button, FormGrid, Input, Loading, Modal, PageHeader, Select, useBusy } from "@/components/ui";
+import { Alert, Button, FormGrid, Input, Loading, Modal, PageHeader, PasswordInput, Select, useBusy } from "@/components/ui";
 import { ResponsiveRecords } from "@/components/responsive-records";
 import { fullName } from "@/lib/format";
 
@@ -15,7 +15,7 @@ type UserRow = {
 };
 type Teacher = { id: string; firstName: string; lastName: string };
 
-const empty = { username: "", password: "", role: "TEACHER" as "ADMIN" | "TEACHER", teacherId: "" };
+const empty = { username: "", password: "", passwordConfirm: "", role: "TEACHER" as "ADMIN" | "TEACHER", teacherId: "" };
 
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -35,6 +35,9 @@ export default function UsersPage() {
   async function save(e: FormEvent) {
     e.preventDefault();
     await run(async () => {
+      if (form.password !== form.passwordConfirm) {
+        throw new Error("تکرار رمز عبور با رمز عبور یکسان نیست");
+      }
       await api("/users", { method: "POST", body: JSON.stringify(form) });
       setOpen(false);
       setForm(empty);
@@ -74,7 +77,8 @@ export default function UsersPage() {
         <FormGrid onSubmit={save}>
           <Alert message={error} inline className="md:col-span-2" />
           <Input label="نام کاربری" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
-          <Input label="رمز عبور" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+          <PasswordInput label="رمز عبور" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="new-password" minLength={6} />
+          <PasswordInput label="تکرار رمز عبور" value={form.passwordConfirm} onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })} required autoComplete="new-password" minLength={6} />
           <Select label="نقش" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as "ADMIN" | "TEACHER" })}>
             <option value="ADMIN">کاربر ارشد</option>
             <option value="TEACHER">دبیر</option>

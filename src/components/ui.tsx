@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/button";
 
@@ -18,6 +19,35 @@ export function Input(
     <label className="block text-sm" htmlFor={id}>
       {label && <span className="mb-1.5 block text-muted">{label}</span>}
       <input id={id} className={cn(fieldClass, className)} {...rest} />
+    </label>
+  );
+}
+
+export function PasswordInput(
+  props: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label?: string },
+) {
+  const { label, className = "", id, ...rest } = props;
+  const [visible, setVisible] = useState(false);
+  return (
+    <label className="block text-sm" htmlFor={id}>
+      {label && <span className="mb-1.5 block text-muted">{label}</span>}
+      <span className="relative block">
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          className={cn(fieldClass, "pe-11", className)}
+          {...rest}
+        />
+        <button
+          type="button"
+          className="absolute inset-e-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:text-navy"
+          aria-label={visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+        >
+          {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </span>
     </label>
   );
 }
